@@ -1,0 +1,522 @@
+[
+  {
+    "key": "google_search",
+    "slug": "google-search",
+    "label": "Google Search",
+    "description": "Google Search (1 credit per row returned)",
+    "fields": [
+      {
+        "name": "queries",
+        "label": "Queries",
+        "type": "string",
+        "required": true,
+        "description": "Search term(s). POST: JSON array `[\"a\",\"b\"]`. GET: first only.",
+        "default": "latest technology news"
+      },
+      {
+        "name": "hl",
+        "label": "Hl",
+        "type": "string",
+        "required": false,
+        "description": "Interface language (alias for languageCode)",
+        "default": "en"
+      },
+      {
+        "name": "gl",
+        "label": "Gl",
+        "type": "string",
+        "required": false,
+        "description": "Geolocation country code (alias for countryCode)",
+        "default": "us"
+      },
+      {
+        "name": "maxPagesPerQuery",
+        "label": "Maxpagesperquery",
+        "type": "number",
+        "required": false,
+        "description": "Result pages to scrape per query (capped at 100)",
+        "default": 1
+      },
+      {
+        "name": "countryCode",
+        "label": "Countrycode",
+        "type": "string",
+        "required": false,
+        "description": "Country code; if empty, gl is used",
+        "default": "us"
+      },
+      {
+        "name": "languageCode",
+        "label": "Languagecode",
+        "type": "string",
+        "required": false,
+        "description": "UI language; if empty, hl is used",
+        "default": "en"
+      },
+      {
+        "name": "max_items",
+        "label": "Max Items",
+        "type": "number",
+        "required": false,
+        "description": "Max organic results total (per request; GET and POST capped at 10,000)",
+        "default": 10
+      },
+      {
+        "name": "use_proxy",
+        "label": "Use Proxy",
+        "type": "boolean",
+        "required": false,
+        "description": "Use platform _proxy_url when true (default: true)",
+        "default": true
+      }
+    ]
+  },
+  {
+    "key": "google_maps",
+    "slug": "google-maps",
+    "label": "Google Maps",
+    "description": "Google Maps (1 credit per row returned)",
+    "fields": [
+      {
+        "name": "queries",
+        "label": "Queries",
+        "type": "string",
+        "required": true,
+        "description": "What to find (e.g. coffee shops). POST: JSON array `[\"a\",\"b\"]` (same grid, merged, deduped by place_id). GET: first only.",
+        "default": "coffee shops"
+      },
+      {
+        "name": "location",
+        "label": "Location",
+        "type": "string",
+        "required": false,
+        "description": "Area to search in. GET: first line if multiline",
+        "default": "Houston,Texas"
+      },
+      {
+        "name": "max_items",
+        "label": "Max Items",
+        "type": "number",
+        "required": false,
+        "description": "Maximum places to return (capped at 1,000)",
+        "default": 10
+      },
+      {
+        "name": "use_proxy",
+        "label": "Use Proxy",
+        "type": "boolean",
+        "required": false,
+        "description": "Use platform _proxy_url when true (default: true)",
+        "default": false
+      }
+    ]
+  },
+  {
+    "key": "google_map_reviews",
+    "slug": "google-map-reviews",
+    "label": "Google Map Reviews",
+    "description": "Google Map Reviews (1 credit per row returned)",
+    "fields": [
+      {
+        "name": "urls",
+        "label": "Urls",
+        "type": "string",
+        "required": true,
+        "description": "Google Maps place URL(s) - newline or semicolon for POST (do not use commas; URLs contain commas). GET: first only",
+        "default": "https://www.google.com/maps/place/Yellowstone+National+Park/@44.5857951,-110.5140571,9z/data=!3m1!4b1!4m5!3m4!1s0x5351e55555555555:0xaca8f930348fe1bb!8m2!3d44.427963!4d-110.588455?hl=en-GB"
+      },
+      {
+        "name": "max_items",
+        "label": "Max Items",
+        "type": "number",
+        "required": false,
+        "description": "Maximum reviews to fetch per place URL (capped at 10,000)",
+        "default": 10
+      },
+      {
+        "name": "hl",
+        "label": "Hl",
+        "type": "string",
+        "required": false,
+        "description": "Language code (e.g. en, fr, de)",
+        "default": "en"
+      },
+      {
+        "name": "gl",
+        "label": "Gl",
+        "type": "string",
+        "required": false,
+        "description": "Region code (e.g. us, gb, ca)",
+        "default": "us"
+      },
+      {
+        "name": "use_proxy",
+        "label": "Use Proxy",
+        "type": "boolean",
+        "required": false,
+        "description": "Use platform _proxy_url when true (default: true)",
+        "default": true
+      }
+    ]
+  },
+  {
+    "key": "amazon_product",
+    "slug": "amazon-product",
+    "label": "Amazon Product",
+    "description": "Amazon Product (1 credit per row returned)",
+    "fields": [
+      {
+        "name": "urls",
+        "label": "Urls",
+        "type": "string",
+        "required": true,
+        "description": "Amazon product or search URL(s). POST: JSON array `[\"a\",\"b\"]`. GET: first only.",
+        "default": "https://www.amazon.com/s?k=keyboard"
+      },
+      {
+        "name": "max_items",
+        "label": "Max Items",
+        "type": "number",
+        "required": false,
+        "description": "Maximum products to scrape per URL (GET capped at 10,000)",
+        "default": 10
+      },
+      {
+        "name": "max_pages",
+        "label": "Max Pages",
+        "type": "number",
+        "required": false,
+        "description": "Maximum search pages to scrape per URL (GET capped at 10)",
+        "default": 10
+      },
+      {
+        "name": "use_proxy",
+        "label": "Use Proxy",
+        "type": "boolean",
+        "required": false,
+        "description": "Enable residential proxy (default: true)",
+        "default": true
+      }
+    ]
+  },
+  {
+    "key": "amazon_search",
+    "slug": "amazon-search",
+    "label": "Amazon Search",
+    "description": "Amazon Search (1 credit per row returned)",
+    "fields": [
+      {
+        "name": "queries",
+        "label": "Queries",
+        "type": "string",
+        "required": true,
+        "description": "Search term(s). POST: JSON array `[\"a\",\"b\"]`. GET: first only.",
+        "default": "Playstation"
+      },
+      {
+        "name": "domain_code",
+        "label": "Domain Code",
+        "type": "string",
+        "required": false,
+        "description": "Amazon domain code: com, co.uk, de, fr, it, es, ca",
+        "default": "com"
+      },
+      {
+        "name": "sort_by",
+        "label": "Sort By",
+        "type": "string",
+        "required": false,
+        "description": "Sort option: relevanceblender, price-asc-rank, price-desc-rank, review-rank, date-desc-rank, exact-aware-popularity-rank",
+        "default": "relevanceblender"
+      },
+      {
+        "name": "max_pages",
+        "label": "Max Pages",
+        "type": "number",
+        "required": false,
+        "description": "Maximum pages to scrape per search term (GET capped at 10)",
+        "default": 1
+      },
+      {
+        "name": "category",
+        "label": "Category",
+        "type": "string",
+        "required": false,
+        "description": "Optional category filter (e.g., electronics)",
+        "default": ""
+      },
+      {
+        "name": "browse_node",
+        "label": "Browse Node",
+        "type": "string",
+        "required": false,
+        "description": "Optional browse node ID for category filtering",
+        "default": ""
+      },
+      {
+        "name": "node_hierarchy",
+        "label": "Node Hierarchy",
+        "type": "string",
+        "required": false,
+        "description": "Optional node hierarchy (comma-separated node IDs)",
+        "default": ""
+      },
+      {
+        "name": "use_proxy",
+        "label": "Use Proxy",
+        "type": "boolean",
+        "required": false,
+        "description": "Use platform _proxy_url when true (default: true)",
+        "default": true
+      }
+    ]
+  },
+  {
+    "key": "youtube_search",
+    "slug": "youtube-search",
+    "label": "Youtube Search",
+    "description": "Youtube Search (1 credit per row returned)",
+    "fields": [
+      {
+        "name": "queries",
+        "label": "Queries",
+        "type": "string",
+        "required": false,
+        "description": "Search term(s). POST: JSON array `[\"a\",\"b\"]` (each searched separately). GET: first only. When empty, the default is used.",
+        "default": "python programming"
+      },
+      {
+        "name": "max_items",
+        "label": "Max Items",
+        "type": "number",
+        "required": false,
+        "description": "Max results per query. GET cap 100, POST cap 10,000 (platform may clamp to endpoint max_results)",
+        "default": 10
+      },
+      {
+        "name": "sort_by",
+        "label": "Sort By",
+        "type": "string",
+        "required": false,
+        "description": "Sort order: relevance, date, viewCount, rating",
+        "default": "relevance"
+      },
+      {
+        "name": "upload_date",
+        "label": "Upload Date",
+        "type": "string",
+        "required": false,
+        "description": "Filter by upload date: lastHour, today, thisWeek, thisMonth, thisYear",
+        "default": ""
+      },
+      {
+        "name": "duration",
+        "label": "Duration",
+        "type": "string",
+        "required": false,
+        "description": "Filter by duration: short, medium, long",
+        "default": ""
+      },
+      {
+        "name": "type",
+        "label": "Type",
+        "type": "string",
+        "required": false,
+        "description": "Search type: video, channel, playlist (comma-separated for multiple)",
+        "default": "video"
+      },
+      {
+        "name": "features",
+        "label": "Features",
+        "type": "string",
+        "required": false,
+        "description": "Additional features: live, 4k, hd, subtitles, creativeCommons, 360, vr180, 3d, location, purchased (comma-separated)",
+        "default": ""
+      },
+      {
+        "name": "use_proxy",
+        "label": "Use Proxy",
+        "type": "boolean",
+        "required": false,
+        "description": "When true (default), use the platform-injected _proxy_url",
+        "default": true
+      }
+    ]
+  },
+  {
+    "key": "tiktok_profile",
+    "slug": "tiktok-profile",
+    "label": "Tiktok Profile",
+    "description": "Tiktok Profile (1 credit per row returned)",
+    "fields": [
+      {
+        "name": "usernames",
+        "label": "Usernames",
+        "type": "string",
+        "required": true,
+        "description": "Username(s) (without @). POST: JSON array `[\"a\",\"b\"]`. GET: first only.",
+        "default": "mrbeast"
+      },
+      {
+        "name": "max_items",
+        "label": "Max Items",
+        "type": "number",
+        "required": false,
+        "description": "Max videos per user. GET cap 100, POST cap 10,000",
+        "default": 10
+      },
+      {
+        "name": "use_proxy",
+        "label": "Use Proxy",
+        "type": "boolean",
+        "required": false,
+        "description": "Use platform _proxy_url when true (default: true)",
+        "default": true
+      }
+    ]
+  },
+  {
+    "key": "instagram_profile_posts",
+    "slug": "instagram-profile-posts",
+    "label": "Instagram Profile Posts",
+    "description": "Instagram Profile Posts (1 credit per row returned)",
+    "fields": [
+      {
+        "name": "usernames",
+        "label": "Usernames",
+        "type": "string",
+        "required": true,
+        "description": "Username(s) or profile URL(s). POST: JSON array `[\"a\",\"b\"]`. GET: first only.",
+        "default": "mrbeast"
+      },
+      {
+        "name": "max_items",
+        "label": "Max Items",
+        "type": "number",
+        "required": false,
+        "description": "Max posts per username; omit/empty/0 = fetch all. When set: GET cap 100, POST cap 10,000",
+        "default": 10
+      },
+      {
+        "name": "pinned_mode",
+        "label": "Pinned Mode",
+        "type": "string",
+        "required": false,
+        "description": "Pinned posts: \"include\" (default), \"skip\", \"only\"",
+        "default": "include"
+      },
+      {
+        "name": "use_proxy",
+        "label": "Use Proxy",
+        "type": "boolean",
+        "required": false,
+        "description": "Use platform _proxy_url when true (default: true)",
+        "default": true
+      }
+    ]
+  },
+  {
+    "key": "linkedin_profile",
+    "slug": "linkedin-profile",
+    "label": "Linkedin Profile",
+    "description": "Linkedin Profile (1 credit per row returned)",
+    "fields": [
+      {
+        "name": "urls",
+        "label": "Urls",
+        "type": "string",
+        "required": true,
+        "description": "Person profile URL(s). POST: JSON array `[\"a\",\"b\"]` (max 10,000). GET: first only.",
+        "default": "https://www.linkedin.com/in/parrsam/"
+      },
+      {
+        "name": "use_proxy",
+        "label": "Use Proxy",
+        "type": "boolean",
+        "required": false,
+        "description": "Use platform _proxy_url when true (default: true)",
+        "default": true
+      }
+    ]
+  },
+  {
+    "key": "facebook_page",
+    "slug": "facebook-page",
+    "label": "Facebook Page",
+    "description": "Facebook Page (1 credit per row returned)",
+    "fields": [
+      {
+        "name": "urls",
+        "label": "Urls",
+        "type": "string",
+        "required": true,
+        "description": "Facebook page URL(s) or username(s). POST: JSON array `[\"a\",\"b\"]`. GET: first only.",
+        "default": "copperkettleyqr"
+      },
+      {
+        "name": "use_proxy",
+        "label": "Use Proxy",
+        "type": "boolean",
+        "required": false,
+        "description": "Use platform _proxy_url when true (default: true)",
+        "default": true
+      }
+    ]
+  },
+  {
+    "key": "duckduckgo_search",
+    "slug": "duckduckgo-search",
+    "label": "Duckduckgo Search",
+    "description": "Duckduckgo Search (1 credit per row returned)",
+    "fields": [
+      {
+        "name": "queries",
+        "label": "Queries",
+        "type": "string",
+        "required": true,
+        "description": "Search term(s). POST: JSON array `[\"a\",\"b\"]` (response dict keyed by each term). GET: first only.",
+        "default": "python programming"
+      },
+      {
+        "name": "search_mode",
+        "label": "Search Mode",
+        "type": "string",
+        "required": false,
+        "description": "default | images | videos | news (aliases: image\u2192images, video\u2192videos)",
+        "default": "default"
+      },
+      {
+        "name": "region",
+        "label": "Region",
+        "type": "string",
+        "required": false,
+        "description": "Region code (wt-wt for worldwide)",
+        "default": "wt-wt"
+      },
+      {
+        "name": "safe_search",
+        "label": "Safe Search",
+        "type": "string",
+        "required": false,
+        "description": "Safe search: OFF, MODERATE, STRICT",
+        "default": "OFF"
+      },
+      {
+        "name": "max_items",
+        "label": "Max Items",
+        "type": "number",
+        "required": false,
+        "description": "Max results (GET and POST capped at 10,000). Pagination runs until reached.",
+        "default": 10
+      },
+      {
+        "name": "use_proxy",
+        "label": "Use Proxy",
+        "type": "boolean",
+        "required": false,
+        "description": "Use platform _proxy_url when true (default: true)",
+        "default": true
+      }
+    ]
+  }
+]

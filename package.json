@@ -1,0 +1,48 @@
+{
+  "name": "n8n-nodes-scrapier",
+  "version": "1.0.0",
+  "description": "n8n community node for the Scrapier web scraping API \u2014 Google, Amazon, Instagram, TikTok, LinkedIn and 20+ more platforms as structured data",
+  "keywords": [
+    "n8n-community-node-package",
+    "scrapier",
+    "web scraping",
+    "scraper"
+  ],
+  "license": "MIT",
+  "homepage": "https://app.scrapier.io",
+  "author": {
+    "name": "Scrapier",
+    "email": "scrapier.io@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/devscraper-007/n8n-nodes-scrapier.git"
+  },
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc && node scripts/copy-assets.js",
+    "dev": "tsc --watch",
+    "test": "node test/smoke.test.js",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "dist"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "dist/credentials/ScrapierApi.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/Scrapier/Scrapier.node.js"
+    ]
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "n8n-workflow": "^1.48.0",
+    "typescript": "^5.5.0"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  }
+}
