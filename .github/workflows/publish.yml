@@ -17,7 +17,9 @@ jobs:
         with:
           node-version: 20
           registry-url: https://registry.npmjs.org
-      - run: npm ci
+      # --ignore-scripts skips native builds of transitive dev deps
+      # (isolated-vm fails to compile on CI and is unused by this package).
+      - run: npm ci --ignore-scripts
       - run: npm run build
       - run: npm test
       - run: npm publish --provenance --access public
