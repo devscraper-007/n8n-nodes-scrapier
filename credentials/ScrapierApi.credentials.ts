@@ -10,7 +10,7 @@ export class ScrapierApi implements ICredentialType {
 
 	displayName = 'Scrapier API';
 
-	documentationUrl = 'https://api.scrapier.io/api/v1/endpoints';
+	documentationUrl = 'https://proxy.scrapier.io/api/v1/endpoints';
 
 	properties: INodeProperties[] = [
 		{
@@ -36,7 +36,7 @@ export class ScrapierApi implements ICredentialType {
 
 	test: ICredentialTestRequest = {
 		request: {
-			baseURL: 'https://api.scrapier.io/api/v1',
+			baseURL: 'https://proxy.scrapier.io/api/v1',
 			url: '/me',
 		},
 	};
