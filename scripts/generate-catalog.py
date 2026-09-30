@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Generate nodes/Scrapier/catalog.json from the app's endpoint catalog so the
-node's operations and fields never drift from the real API.
+"""Generate nodes/Scrapier/catalog.json from the app's endpoint catalog (the
+API v2 snapshot at scrapier-app/src/assets/endpoints.json) so the node's
+operations and fields never drift from the real API.
 
 Usage: python3 scripts/generate-catalog.py   (from n8n-nodes-scrapier/)
 """
@@ -20,10 +21,9 @@ OUT = os.path.join(HERE, '..', 'nodes', 'Scrapier', 'catalog.json')
 CHOSEN = [
     'google-search',
     'google-maps',
-    'google-map-reviews',
     'amazon-product',
     'amazon-search',
-    'youtube-search',
+    'youtube-search-full',
     'tiktok-profile',
     'instagram-profile-posts',
     'linkedin-profile',
@@ -36,6 +36,11 @@ TYPE_MAP = {'string': 'string', 'integer': 'number', 'number': 'number', 'boolea
 
 def label(slug):
     return ' '.join(w.capitalize() for w in slug.replace('_', '-').split('-'))
+
+
+def credit_text(cost):
+    # v2 bills cost_credit once per successful call, whatever the page holds.
+    return f'{cost} credit' if cost == 1 else f'{cost} credits'
 
 
 def build():
@@ -79,7 +84,7 @@ def build():
             'key': slug.replace('-', '_'),
             'slug': slug,
             'label': label(slug),
-            'description': f'{label(slug)} ({api.get("cost_credit", 1)} credit per row returned)',
+            'description': f'{label(slug)} ({credit_text(api.get("cost_credit", 1))} per successful call)',
             'fields': fields,
         })
 

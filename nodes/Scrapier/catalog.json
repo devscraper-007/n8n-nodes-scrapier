@@ -3,15 +3,87 @@
     "key": "google_search",
     "slug": "google-search",
     "label": "Google Search",
-    "description": "Google Search (1 credit per row returned)",
+    "description": "Google Search (1 credit per successful call)",
     "fields": [
       {
         "name": "queries",
         "label": "Queries",
         "type": "string",
         "required": true,
-        "description": "Search term(s). POST: JSON array `[\"a\",\"b\"]`. GET: first only.",
+        "description": "Search keyword. Required first call.",
         "default": "latest technology news"
+      },
+      {
+        "name": "cursor",
+        "label": "Cursor",
+        "type": "string",
+        "required": false,
+        "description": "Pagination cursor returned in the previous response's `next_cursor`. Pass it back unchanged to fetch the next page. When `next_cursor` is null, you have reached the last page.",
+        "default": ""
+      },
+      {
+        "name": "countryCode",
+        "label": "Countrycode",
+        "type": "string",
+        "required": false,
+        "description": "Country (gl) code. Locked in cursor.",
+        "default": "us"
+      },
+      {
+        "name": "languageCode",
+        "label": "Languagecode",
+        "type": "string",
+        "required": false,
+        "description": "UI language (hl). Locked in cursor.",
+        "default": "en"
+      },
+      {
+        "name": "site",
+        "label": "Site",
+        "type": "string",
+        "required": false,
+        "description": "Optional site: filter. Locked in cursor.",
+        "default": ""
+      },
+      {
+        "name": "quickDateRange",
+        "label": "Quickdaterange",
+        "type": "string",
+        "required": false,
+        "description": "Optional date filter (h/d/w/m/y). Locked in cursor.",
+        "default": ""
+      },
+      {
+        "name": "beforeDate",
+        "label": "Beforedate",
+        "type": "string",
+        "required": false,
+        "description": "Optional before:YYYY-MM-DD. Locked in cursor.",
+        "default": ""
+      },
+      {
+        "name": "afterDate",
+        "label": "Afterdate",
+        "type": "string",
+        "required": false,
+        "description": "Optional after:YYYY-MM-DD. Locked in cursor.",
+        "default": ""
+      },
+      {
+        "name": "mobileResults",
+        "label": "Mobileresults",
+        "type": "boolean",
+        "required": false,
+        "description": "Mobile user-agent SERP. Locked in cursor.",
+        "default": false
+      },
+      {
+        "name": "aiMode",
+        "label": "Aimode",
+        "type": "string",
+        "required": false,
+        "description": "aiModeOff | aiModeOn. Locked in cursor.",
+        "default": "aiModeOff"
       },
       {
         "name": "hl",
@@ -38,30 +110,6 @@
         "default": 1
       },
       {
-        "name": "countryCode",
-        "label": "Countrycode",
-        "type": "string",
-        "required": false,
-        "description": "Country code; if empty, gl is used",
-        "default": "us"
-      },
-      {
-        "name": "languageCode",
-        "label": "Languagecode",
-        "type": "string",
-        "required": false,
-        "description": "UI language; if empty, hl is used",
-        "default": "en"
-      },
-      {
-        "name": "max_items",
-        "label": "Max Items",
-        "type": "number",
-        "required": false,
-        "description": "Max organic results total (per request; GET and POST capped at 10,000)",
-        "default": 10
-      },
-      {
         "name": "use_proxy",
         "label": "Use Proxy",
         "type": "boolean",
@@ -75,78 +123,46 @@
     "key": "google_maps",
     "slug": "google-maps",
     "label": "Google Maps",
-    "description": "Google Maps (1 credit per row returned)",
+    "description": "Google Maps (1 credit per successful call)",
     "fields": [
       {
         "name": "queries",
         "label": "Queries",
         "type": "string",
         "required": true,
-        "description": "What to find (e.g. coffee shops). POST: JSON array `[\"a\",\"b\"]` (same grid, merged, deduped by place_id). GET: first only.",
+        "description": "Place search keyword. Required first call.",
         "default": "coffee shops"
+      },
+      {
+        "name": "cursor",
+        "label": "Cursor",
+        "type": "string",
+        "required": false,
+        "description": "Pagination cursor returned in the previous response's `next_cursor`. Pass it back unchanged to fetch the next page. When `next_cursor` is null, you have reached the last page.",
+        "default": ""
       },
       {
         "name": "location",
         "label": "Location",
         "type": "string",
         "required": false,
-        "description": "Area to search in. GET: first line if multiline",
+        "description": "Geocode anchor for the search (city, address, or \"lat,lng\"). Locked in cursor.",
         "default": "Houston,Texas"
       },
       {
-        "name": "max_items",
-        "label": "Max Items",
-        "type": "number",
-        "required": false,
-        "description": "Maximum places to return (capped at 1,000)",
-        "default": 10
-      },
-      {
-        "name": "use_proxy",
-        "label": "Use Proxy",
-        "type": "boolean",
-        "required": false,
-        "description": "Use platform _proxy_url when true (default: true)",
-        "default": false
-      }
-    ]
-  },
-  {
-    "key": "google_map_reviews",
-    "slug": "google-map-reviews",
-    "label": "Google Map Reviews",
-    "description": "Google Map Reviews (1 credit per row returned)",
-    "fields": [
-      {
-        "name": "urls",
-        "label": "Urls",
-        "type": "string",
-        "required": true,
-        "description": "Google Maps place URL(s) - newline or semicolon for POST (do not use commas; URLs contain commas). GET: first only",
-        "default": "https://www.google.com/maps/place/Yellowstone+National+Park/@44.5857951,-110.5140571,9z/data=!3m1!4b1!4m5!3m4!1s0x5351e55555555555:0xaca8f930348fe1bb!8m2!3d44.427963!4d-110.588455?hl=en-GB"
-      },
-      {
-        "name": "max_items",
-        "label": "Max Items",
-        "type": "number",
-        "required": false,
-        "description": "Maximum reviews to fetch per place URL (capped at 10,000)",
-        "default": 10
-      },
-      {
-        "name": "hl",
-        "label": "Hl",
+        "name": "language",
+        "label": "Language",
         "type": "string",
         "required": false,
-        "description": "Language code (e.g. en, fr, de)",
+        "description": "Language. Locked in cursor.",
         "default": "en"
       },
       {
-        "name": "gl",
-        "label": "Gl",
+        "name": "country",
+        "label": "Country",
         "type": "string",
         "required": false,
-        "description": "Region code (e.g. us, gb, ca)",
+        "description": "Country bias. Locked in cursor.",
         "default": "us"
       },
       {
@@ -154,8 +170,8 @@
         "label": "Use Proxy",
         "type": "boolean",
         "required": false,
-        "description": "Use platform _proxy_url when true (default: true)",
-        "default": true
+        "description": "Use platform _proxy_url when true (default: false for this endpoint)",
+        "default": false
       }
     ]
   },
@@ -163,38 +179,38 @@
     "key": "amazon_product",
     "slug": "amazon-product",
     "label": "Amazon Product",
-    "description": "Amazon Product (1 credit per row returned)",
+    "description": "Amazon Product (1 credit per successful call)",
     "fields": [
       {
-        "name": "urls",
-        "label": "Urls",
+        "name": "query",
+        "label": "Query",
         "type": "string",
-        "required": true,
-        "description": "Amazon product or search URL(s). POST: JSON array `[\"a\",\"b\"]`. GET: first only.",
-        "default": "https://www.amazon.com/s?k=keyboard"
+        "required": false,
+        "description": "Search keyword. Builds https://www.amazon.com/s?k=\u2026 when url is omitted. Required first call unless url given. Aliases: queries, keyword, q.",
+        "default": "keyboard"
       },
       {
-        "name": "max_items",
-        "label": "Max Items",
-        "type": "number",
+        "name": "url",
+        "label": "Url",
+        "type": "string",
         "required": false,
-        "description": "Maximum products to scrape per URL (GET capped at 10,000)",
-        "default": 10
+        "description": "Amazon search/category URL or product /dp/ URL. Takes precedence over query. Product URLs return a single result with next_cursor=null; search URLs paginate. Aliases: urls.",
+        "default": ""
       },
       {
-        "name": "max_pages",
-        "label": "Max Pages",
-        "type": "number",
+        "name": "cursor",
+        "label": "Cursor",
+        "type": "string",
         "required": false,
-        "description": "Maximum search pages to scrape per URL (GET capped at 10)",
-        "default": 10
+        "description": "Pagination cursor returned in the previous response's `next_cursor`. Pass it back unchanged to fetch the next page. When `next_cursor` is null, you have reached the last page.",
+        "default": ""
       },
       {
         "name": "use_proxy",
         "label": "Use Proxy",
         "type": "boolean",
         "required": false,
-        "description": "Enable residential proxy (default: true)",
+        "description": "Use platform _proxy_url when true (default: true)",
         "default": true
       }
     ]
@@ -203,22 +219,30 @@
     "key": "amazon_search",
     "slug": "amazon-search",
     "label": "Amazon Search",
-    "description": "Amazon Search (1 credit per row returned)",
+    "description": "Amazon Search (1 credit per successful call)",
     "fields": [
       {
-        "name": "queries",
-        "label": "Queries",
+        "name": "query",
+        "label": "Query",
         "type": "string",
         "required": true,
-        "description": "Search term(s). POST: JSON array `[\"a\",\"b\"]`. GET: first only.",
+        "description": "Search keyword (required first call).",
         "default": "Playstation"
+      },
+      {
+        "name": "cursor",
+        "label": "Cursor",
+        "type": "string",
+        "required": false,
+        "description": "Pagination cursor returned in the previous response's `next_cursor`. Pass it back unchanged to fetch the next page. When `next_cursor` is null, you have reached the last page.",
+        "default": ""
       },
       {
         "name": "domain_code",
         "label": "Domain Code",
         "type": "string",
         "required": false,
-        "description": "Amazon domain code: com, co.uk, de, fr, it, es, ca",
+        "description": "Amazon domain (com, co.uk, de, ...). Locked in cursor.",
         "default": "com"
       },
       {
@@ -226,8 +250,32 @@
         "label": "Sort By",
         "type": "string",
         "required": false,
-        "description": "Sort option: relevanceblender, price-asc-rank, price-desc-rank, review-rank, date-desc-rank, exact-aware-popularity-rank",
+        "description": "Amazon sort key. Locked in cursor.",
         "default": "relevanceblender"
+      },
+      {
+        "name": "category",
+        "label": "Category",
+        "type": "string",
+        "required": false,
+        "description": "Search category (optional)",
+        "default": ""
+      },
+      {
+        "name": "browse_node",
+        "label": "Browse Node",
+        "type": "number",
+        "required": false,
+        "description": "Browse node ID (optional)",
+        "default": null
+      },
+      {
+        "name": "node_hierarchy",
+        "label": "Node Hierarchy",
+        "type": "string",
+        "required": false,
+        "description": "Node hierarchy (optional)",
+        "default": ""
       },
       {
         "name": "max_pages",
@@ -238,28 +286,132 @@
         "default": 1
       },
       {
-        "name": "category",
-        "label": "Category",
+        "name": "use_proxy",
+        "label": "Use Proxy",
+        "type": "boolean",
+        "required": false,
+        "description": "Use platform _proxy_url when true (default: true)",
+        "default": true
+      }
+    ]
+  },
+  {
+    "key": "youtube_search_full",
+    "slug": "youtube-search-full",
+    "label": "Youtube Search Full",
+    "description": "Youtube Search Full (1 credit per successful call)",
+    "fields": [
+      {
+        "name": "queries",
+        "label": "Queries",
+        "type": "string",
+        "required": true,
+        "description": "Search term. Required on first call; ignored when `cursor` is supplied.",
+        "default": "fitness"
+      },
+      {
+        "name": "cursor",
+        "label": "Cursor",
         "type": "string",
         "required": false,
-        "description": "Optional category filter (e.g., electronics)",
+        "description": "Pagination cursor returned in the previous response's `next_cursor`. Pass it back unchanged to fetch the next page. When `next_cursor` is null, you have reached the last page.",
         "default": ""
       },
       {
-        "name": "browse_node",
-        "label": "Browse Node",
-        "type": "string",
+        "name": "max_results_video",
+        "label": "Max Results Video",
+        "type": "number",
         "required": false,
-        "description": "Optional browse node ID for category filtering",
-        "default": ""
+        "description": "Max regular videos per page (0 = exclude). Locked into the cursor.",
+        "default": 10
       },
       {
-        "name": "node_hierarchy",
-        "label": "Node Hierarchy",
+        "name": "max_results_shorts",
+        "label": "Max Results Shorts",
+        "type": "number",
+        "required": false,
+        "description": "Max shorts per page (0 = exclude). Locked into the cursor.",
+        "default": 10
+      },
+      {
+        "name": "max_results_streams",
+        "label": "Max Results Streams",
+        "type": "number",
+        "required": false,
+        "description": "Max live streams per page (0 = exclude). Locked into the cursor.",
+        "default": 0
+      },
+      {
+        "name": "download_subtitles",
+        "label": "Download Subtitles",
+        "type": "boolean",
+        "required": false,
+        "description": "Download transcripts. Locked into the cursor.",
+        "default": true
+      },
+      {
+        "name": "subtitles_language",
+        "label": "Subtitles Language",
         "type": "string",
         "required": false,
-        "description": "Optional node hierarchy (comma-separated node IDs)",
-        "default": ""
+        "description": "Transcript language code. Locked into the cursor.",
+        "default": "en"
+      },
+      {
+        "name": "subtitles_format",
+        "label": "Subtitles Format",
+        "type": "string",
+        "required": false,
+        "description": "Transcript format \u2014 text or srt. Locked into the cursor.",
+        "default": "srt"
+      },
+      {
+        "name": "fetch_metadata",
+        "label": "Fetch Metadata",
+        "type": "boolean",
+        "required": false,
+        "description": "Fetch detailed metadata (likes, comments, subscribers). Locked into the cursor.",
+        "default": true
+      },
+      {
+        "name": "max_pages_per_query",
+        "label": "Max Pages Per Query",
+        "type": "number",
+        "required": false,
+        "description": "Max upstream search pages per query. Locked into the cursor.",
+        "default": 50
+      },
+      {
+        "name": "isHD",
+        "label": "Ishd",
+        "type": "boolean",
+        "required": false,
+        "description": "Filter: HD only. Locked into the cursor.",
+        "default": false
+      },
+      {
+        "name": "is4K",
+        "label": "Is4k",
+        "type": "boolean",
+        "required": false,
+        "description": "Filter: 4K only. Locked into the cursor.",
+        "default": false
+      },
+      {
+        "name": "isLive",
+        "label": "Islive",
+        "type": "boolean",
+        "required": false,
+        "description": "Filter: live streams only. Locked into the cursor.",
+        "default": false
+      },
+      {
+        "name": "hasSubtitles",
+        "label": "Hassubtitles",
+        "type": "boolean",
+        "required": false,
+        "description": "Filter: videos with subtitles only. Locked into the cursor.",
+        "default": false
       },
       {
         "name": "use_proxy",
@@ -272,98 +424,26 @@
     ]
   },
   {
-    "key": "youtube_search",
-    "slug": "youtube-search",
-    "label": "Youtube Search",
-    "description": "Youtube Search (1 credit per row returned)",
-    "fields": [
-      {
-        "name": "queries",
-        "label": "Queries",
-        "type": "string",
-        "required": false,
-        "description": "Search term(s). POST: JSON array `[\"a\",\"b\"]` (each searched separately). GET: first only. When empty, the default is used.",
-        "default": "python programming"
-      },
-      {
-        "name": "max_items",
-        "label": "Max Items",
-        "type": "number",
-        "required": false,
-        "description": "Max results per query. GET cap 100, POST cap 10,000 (platform may clamp to endpoint max_results)",
-        "default": 10
-      },
-      {
-        "name": "sort_by",
-        "label": "Sort By",
-        "type": "string",
-        "required": false,
-        "description": "Sort order: relevance, date, viewCount, rating",
-        "default": "relevance"
-      },
-      {
-        "name": "upload_date",
-        "label": "Upload Date",
-        "type": "string",
-        "required": false,
-        "description": "Filter by upload date: lastHour, today, thisWeek, thisMonth, thisYear",
-        "default": ""
-      },
-      {
-        "name": "duration",
-        "label": "Duration",
-        "type": "string",
-        "required": false,
-        "description": "Filter by duration: short, medium, long",
-        "default": ""
-      },
-      {
-        "name": "type",
-        "label": "Type",
-        "type": "string",
-        "required": false,
-        "description": "Search type: video, channel, playlist (comma-separated for multiple)",
-        "default": "video"
-      },
-      {
-        "name": "features",
-        "label": "Features",
-        "type": "string",
-        "required": false,
-        "description": "Additional features: live, 4k, hd, subtitles, creativeCommons, 360, vr180, 3d, location, purchased (comma-separated)",
-        "default": ""
-      },
-      {
-        "name": "use_proxy",
-        "label": "Use Proxy",
-        "type": "boolean",
-        "required": false,
-        "description": "When true (default), use the platform-injected _proxy_url",
-        "default": true
-      }
-    ]
-  },
-  {
     "key": "tiktok_profile",
     "slug": "tiktok-profile",
     "label": "Tiktok Profile",
-    "description": "Tiktok Profile (1 credit per row returned)",
+    "description": "Tiktok Profile (1 credit per successful call)",
     "fields": [
       {
         "name": "usernames",
         "label": "Usernames",
         "type": "string",
         "required": true,
-        "description": "Username(s) (without @). POST: JSON array `[\"a\",\"b\"]`. GET: first only.",
+        "description": "TikTok username (without @). Required on first call; ignored when `cursor` is supplied.",
         "default": "mrbeast"
       },
       {
-        "name": "max_items",
-        "label": "Max Items",
-        "type": "number",
+        "name": "cursor",
+        "label": "Cursor",
+        "type": "string",
         "required": false,
-        "description": "Max videos per user. GET cap 100, POST cap 10,000",
-        "default": 10
+        "description": "Pagination cursor returned in the previous response's `next_cursor`. Pass it back unchanged to fetch the next page. When `next_cursor` is null, you have reached the last page.",
+        "default": ""
       },
       {
         "name": "use_proxy",
@@ -379,30 +459,30 @@
     "key": "instagram_profile_posts",
     "slug": "instagram-profile-posts",
     "label": "Instagram Profile Posts",
-    "description": "Instagram Profile Posts (1 credit per row returned)",
+    "description": "Instagram Profile Posts (1 credit per successful call)",
     "fields": [
       {
         "name": "usernames",
         "label": "Usernames",
         "type": "string",
         "required": true,
-        "description": "Username(s) or profile URL(s). POST: JSON array `[\"a\",\"b\"]`. GET: first only.",
+        "description": "Instagram username.",
         "default": "mrbeast"
       },
       {
-        "name": "max_items",
-        "label": "Max Items",
-        "type": "number",
+        "name": "cursor",
+        "label": "Cursor",
+        "type": "string",
         "required": false,
-        "description": "Max posts per username; omit/empty/0 = fetch all. When set: GET cap 100, POST cap 10,000",
-        "default": 10
+        "description": "Pagination cursor returned in the previous response's `next_cursor`. Pass it back unchanged to fetch the next page. When `next_cursor` is null, you have reached the last page.",
+        "default": ""
       },
       {
         "name": "pinned_mode",
         "label": "Pinned Mode",
         "type": "string",
         "required": false,
-        "description": "Pinned posts: \"include\" (default), \"skip\", \"only\"",
+        "description": "include | skip | only \u2014 pinned-post filter. Locked in cursor.",
         "default": "include"
       },
       {
@@ -419,15 +499,23 @@
     "key": "linkedin_profile",
     "slug": "linkedin-profile",
     "label": "Linkedin Profile",
-    "description": "Linkedin Profile (1 credit per row returned)",
+    "description": "Linkedin Profile (1 credit per successful call)",
     "fields": [
       {
         "name": "urls",
         "label": "Urls",
         "type": "string",
         "required": true,
-        "description": "Person profile URL(s). POST: JSON array `[\"a\",\"b\"]` (max 10,000). GET: first only.",
+        "description": "LinkedIn person profile URL. Lookup endpoint.",
         "default": "https://www.linkedin.com/in/parrsam/"
+      },
+      {
+        "name": "cursor",
+        "label": "Cursor",
+        "type": "string",
+        "required": false,
+        "description": "Pagination cursor returned in the previous response's `next_cursor`. Pass it back unchanged to fetch the next page. When `next_cursor` is null, you have reached the last page.",
+        "default": ""
       },
       {
         "name": "use_proxy",
@@ -443,15 +531,23 @@
     "key": "facebook_page",
     "slug": "facebook-page",
     "label": "Facebook Page",
-    "description": "Facebook Page (1 credit per row returned)",
+    "description": "Facebook Page (1 credit per successful call)",
     "fields": [
       {
         "name": "urls",
         "label": "Urls",
         "type": "string",
         "required": true,
-        "description": "Facebook page URL(s) or username(s). POST: JSON array `[\"a\",\"b\"]`. GET: first only.",
+        "description": "Facebook page URL or username. Lookup endpoint \u2014 next_cursor is always null.",
         "default": "copperkettleyqr"
+      },
+      {
+        "name": "cursor",
+        "label": "Cursor",
+        "type": "string",
+        "required": false,
+        "description": "Pagination cursor returned in the previous response's `next_cursor`. Pass it back unchanged to fetch the next page. When `next_cursor` is null, you have reached the last page.",
+        "default": ""
       },
       {
         "name": "use_proxy",
@@ -467,22 +563,30 @@
     "key": "duckduckgo_search",
     "slug": "duckduckgo-search",
     "label": "Duckduckgo Search",
-    "description": "Duckduckgo Search (1 credit per row returned)",
+    "description": "Duckduckgo Search (1 credit per successful call)",
     "fields": [
       {
-        "name": "queries",
-        "label": "Queries",
+        "name": "query",
+        "label": "Query",
         "type": "string",
         "required": true,
-        "description": "Search term(s). POST: JSON array `[\"a\",\"b\"]` (response dict keyed by each term). GET: first only.",
+        "description": "Search term. Required on first call; ignored when `cursor` is supplied.",
         "default": "python programming"
+      },
+      {
+        "name": "cursor",
+        "label": "Cursor",
+        "type": "string",
+        "required": false,
+        "description": "Pagination cursor returned in the previous response's `next_cursor`. Pass it back unchanged to fetch the next page. When `next_cursor` is null, you have reached the last page.",
+        "default": ""
       },
       {
         "name": "search_mode",
         "label": "Search Mode",
         "type": "string",
         "required": false,
-        "description": "default | images | videos | news (aliases: image\u2192images, video\u2192videos)",
+        "description": "Result type: default (web) | images | videos | news. Locked into the cursor on first call.",
         "default": "default"
       },
       {
@@ -490,7 +594,7 @@
         "label": "Region",
         "type": "string",
         "required": false,
-        "description": "Region code (wt-wt for worldwide)",
+        "description": "DuckDuckGo region code (e.g. wt-wt, us-en, uk-en). Locked into the cursor.",
         "default": "wt-wt"
       },
       {
@@ -498,16 +602,8 @@
         "label": "Safe Search",
         "type": "string",
         "required": false,
-        "description": "Safe search: OFF, MODERATE, STRICT",
+        "description": "Safe-search level. Locked into the cursor.",
         "default": "OFF"
-      },
-      {
-        "name": "max_items",
-        "label": "Max Items",
-        "type": "number",
-        "required": false,
-        "description": "Max results (GET and POST capped at 10,000). Pagination runs until reached.",
-        "default": 10
       },
       {
         "name": "use_proxy",

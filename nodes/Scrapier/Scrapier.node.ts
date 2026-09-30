@@ -6,13 +6,15 @@ import type {
 	INodePropertyOptions,
 	INodeType,
 	INodeTypeDescription,
+	IN8nHttpFullResponse,
+	JsonObject,
 	NodeConnectionType,
 } from 'n8n-workflow';
-import { NodeOperationError } from 'n8n-workflow';
+import { NodeApiError, NodeOperationError } from 'n8n-workflow';
 
 import catalog from './catalog.json';
 
-const BASE_URL = 'https://proxy.scrapier.io/api/v1';
+const BASE_URL = 'https://proxy.scrapier.io/api/v2';
 
 interface CatalogField {
 	name: string;
@@ -80,7 +82,7 @@ const customProperties: INodeProperties[] = [
 		required: true,
 		placeholder: 'e.g. zillow-search',
 		description:
-			'Any endpoint from the catalog at https://proxy.scrapier.io/api/v1/endpoints',
+			'Any endpoint from the catalog at https://proxy.scrapier.io/api/v2/endpoints',
 		displayOptions: { show: { operation: ['custom_scrape'] } },
 	},
 	{
@@ -89,27 +91,9 @@ const customProperties: INodeProperties[] = [
 		type: 'json',
 		default: '{}',
 		required: true,
-		description: "The endpoint's input parameters as a JSON object",
+		description:
+			"The endpoint's input parameters as a JSON object. To fetch the next page, include \"cursor\" set to the previous response's next_cursor.",
 		displayOptions: { show: { operation: ['custom_scrape'] } },
-	},
-];
-
-const commonProperties: INodeProperties[] = [
-	{
-		displayName: 'Webhook URL',
-		name: 'webhookUrl',
-		type: 'string',
-		default: '',
-		description:
-			'Optional. For async scrapes, Scrapier POSTs the finished job result to this URL (e.g. an n8n Webhook node URL) instead of you polling.',
-	},
-	{
-		displayName: 'Split Rows Into Items',
-		name: 'splitRows',
-		type: 'boolean',
-		default: true,
-		description:
-			'Whether to output one n8n item per scraped row. When disabled, the raw API response is returned as a single item.',
 	},
 ];
 
@@ -138,7 +122,6 @@ export class Scrapier implements INodeType {
 			},
 			...fieldProperties,
 			...customProperties,
-			...commonProperties,
 		],
 	};
 
@@ -177,9 +160,7 @@ export class Scrapier implements INodeType {
 					}
 				}
 
-				const webhookUrl = this.getNodeParameter('webhookUrl', i, '') as string;
-				if (webhookUrl) body.webhook_url = webhookUrl;
-
+				// v2 scrapes are synchronous: one call returns one page of results.
 				const response = (await this.helpers.httpRequestWithAuthentication.call(
 					this,
 					'scrapierApi',
@@ -188,20 +169,44 @@ export class Scrapier implements INodeType {
 						url: `${BASE_URL}/${slug}/`,
 						body,
 						json: true,
+						returnFullResponse: true,
+						ignoreHttpStatusErrors: true,
 					},
-				)) as IDataObject;
+				)) as IN8nHttpFullResponse;
 
-				const splitRows = this.getNodeParameter('splitRows', i, true) as boolean;
-				const rows = response?.data;
-				if (splitRows && Array.isArray(rows)) {
-					for (const row of rows) {
+				const statusCode = response.statusCode;
+				const payload = (
+					response.body && typeof response.body === 'object' ? response.body : {}
+				) as IDataObject;
+
+				if (statusCode < 200 || statusCode >= 300 || payload.success !== true) {
+					const message =
+						typeof payload.error === 'string' && payload.error
+							? payload.error
+							: `Scrapier request failed (HTTP ${statusCode})`;
+					throw new NodeApiError(this.getNode(), payload as JsonObject, {
+						message,
+						httpCode: String(statusCode),
+						itemIndex: i,
+					});
+				}
+
+				// `data` is the page object (results under an endpoint-specific key,
+				// plus `next_cursor`). Emit it as one item so `next_cursor` can drive a
+				// pagination loop; an array `data` becomes one item per element.
+				const data = payload.data;
+				if (Array.isArray(data)) {
+					for (const row of data) {
 						returnData.push({
-							json: row as IDataObject,
+							json: (row && typeof row === 'object' ? row : { value: row }) as IDataObject,
 							pairedItem: { item: i },
 						});
 					}
 				} else {
-					returnData.push({ json: response, pairedItem: { item: i } });
+					returnData.push({
+						json: (data && typeof data === 'object' ? data : { data }) as IDataObject,
+						pairedItem: { item: i },
+					});
 				}
 			} catch (error) {
 				if (this.continueOnFail()) {
