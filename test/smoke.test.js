@@ -35,18 +35,58 @@ const propNames = node.description.properties.map((p) => p.name);
 assert.ok(!propNames.includes('webhookUrl'), 'webhookUrl option removed');
 assert.ok(!propNames.includes('splitRows'), 'splitRows option removed');
 
-// google_search pages by number (`page`); the other curated operations take a
-// `cursor` token.
-const pagination = node.description.properties.find(
-	(p) => (p.name === 'page' || p.name === 'cursor') && p.displayOptions.show.operation.includes('google_search'),
+// google_search pages by number (`page`) and has no cursor; the other
+// curated operations take a `cursor` token.
+const fieldsOf = (op) => node.description.properties.filter(
+	(p) => p.displayOptions && p.displayOptions.show && p.displayOptions.show.operation
+		&& p.displayOptions.show.operation.includes(op),
 );
-assert.ok(pagination, 'google_search exposes a pagination input (page or cursor)');
+const gsFields = fieldsOf('google_search');
+assert.ok(gsFields.some((p) => p.name === 'page'), 'google_search exposes a page input');
+assert.ok(!gsFields.some((p) => p.name === 'cursor'), 'google_search has no cursor');
+for (const op of opProp.options.map((o) => o.value).filter((v) => v !== 'custom_scrape' && v !== 'google_search')) {
+	assert.ok(fieldsOf(op).some((p) => p.name === 'cursor'), `${op} exposes a cursor`);
+}
 
 const queries = node.description.properties.find(
 	(p) => p.name === 'queries' && p.displayOptions.show.operation.includes('google_search'),
 );
 assert.ok(queries, 'google_search has a queries field');
 assert.strictEqual(queries.required, true);
+
+// Credit text must be the catalog's cost_credit, never a baked default. Reads
+// the app's endpoint snapshot when this runs inside the scrapier-app repo
+// (or ENDPOINTS_JSON points at one); otherwise falls back to the prices the
+// API charged when this was written: amazon-product 3, amazon-search 2,
+// youtube-search-full 5 (each was once baked as 1 from a stale snapshot).
+function expectedCredits(slugs) {
+	const fs = require('fs');
+	const path = require('path');
+	const candidates = [process.env.ENDPOINTS_JSON, path.join(__dirname, '..', '..', 'src', 'assets', 'endpoints.json')]
+		.filter(Boolean);
+	const file = candidates.find((p) => fs.existsSync(p));
+	const pinned = { 'amazon-product': 3, 'amazon-search': 2, 'youtube-search-full': 5 };
+	if (!file) return pinned;
+	const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+	const out = {};
+	for (const p of data.endpoints) {
+		for (const a of p.apis) {
+			const slug = a.endpoint.replace(/^\/+|\/+$/g, '');
+			if (slugs.includes(slug)) out[slug] = a.cost_credit;
+		}
+	}
+	return out;
+}
+
+{
+	const slugs = ['amazon-product', 'amazon-search', 'youtube-search-full'];
+	const want = expectedCredits(slugs);
+	for (const slug of slugs) {
+		const op = opProp.options.find((o) => o.value === slug.replace(/-/g, '_'));
+		const text = `${want[slug]} credits per successful call`;
+		assert.ok(op.description.includes(text), `${op.value} description states "${text}": ${op.description}`);
+	}
+}
 
 assert.strictEqual(cred.name, 'scrapierApi');
 assert.strictEqual(cred.authenticate.properties.headers['X-API-Key'], '={{$credentials.apiKey}}');

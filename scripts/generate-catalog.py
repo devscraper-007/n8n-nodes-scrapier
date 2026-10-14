@@ -5,10 +5,11 @@ node's operations, fields and credit costs never drift from the real API.
 
 Credit costs are read from each endpoint's cost_credit, never hardcoded; an
 endpoint without one stops the run. Endpoints the catalog marks `disabled` are
-left out (with a warning) because they are not callable.
+not callable. A curated endpoint that is disabled stops the run (dropping an
+operation breaks workflows using it) unless it is named with --allow-drop.
 
 Usage (from n8n-nodes-scrapier/):
-    python3 scripts/generate-catalog.py [--source PATH/TO/endpoints.json]
+    python3 scripts/generate-catalog.py [--source PATH/TO/endpoints.json] [--allow-drop SLUG ...]
 
 The source is, in order: --source, the ENDPOINTS_JSON environment variable, or
 (only when this folder sits inside the scrapier-app repo) that repo's
@@ -78,7 +79,7 @@ def resolve_source(cli_value):
         'There is deliberately no default outside the scrapier-app repo.')
 
 
-def build(source):
+def build(source, allow_drop=()):
     with open(source) as f:
         data = json.load(f)
 
@@ -92,8 +93,16 @@ def build(source):
         raise SystemExit(f'Endpoints missing from endpoints.json: {missing}')
 
     disabled = [s for s in CHOSEN if by_slug[s].get('disabled')]
+    blocked = [s for s in disabled if s not in allow_drop]
+    if blocked:
+        raise SystemExit(
+            'BREAKING: these curated endpoints are disabled in the catalog and would be silently\n'
+            f'dropped from the node: {", ".join(blocked)}\n'
+            'Users of those operations would break on the next publish. Re-enable them upstream, remove\n'
+            'them from CHOSEN on purpose, or re-run with '
+            + ' '.join(f'--allow-drop {s}' for s in blocked) + ' to accept the removal.')
     for s in disabled:
-        print(f'WARNING: {s} is disabled in the catalog; leaving it out of the node.', file=sys.stderr)
+        print(f'WARNING: {s} is disabled in the catalog; dropped from the node (--allow-drop).', file=sys.stderr)
 
     operations = []
     for slug in (s for s in CHOSEN if s not in disabled):
@@ -137,4 +146,8 @@ def build(source):
 if __name__ == '__main__':
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('--source', help='path to the scrapier-app endpoints.json (or set ENDPOINTS_JSON)')
-    build(resolve_source(ap.parse_args().source))
+    ap.add_argument('--allow-drop', action='append', default=[], metavar='SLUG',
+                    help='accept removing this curated endpoint because the catalog marks it disabled '
+                         '(without it the run stops: dropping an operation breaks workflows that use it)')
+    args = ap.parse_args()
+    build(resolve_source(args.source), set(args.allow_drop))
