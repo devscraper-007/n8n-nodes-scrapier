@@ -31,10 +31,10 @@ structured data.
 
 ## Pricing
 
-Each successful call costs the endpoint's credit price (each operation's
-description lists it; today that is 1 to 5 credits depending on the
-operation), however many results the page holds, empty pages included.
-Failed calls are free.
+Each successful call costs the endpoint's credit price, however many
+results the page holds, empty pages included. Curated operations cost 1 to
+5 credits each (each operation's description lists it); Custom Scrape bills
+the chosen endpoint's own price (up to 100). Failed calls are free.
 
 ## Upgrading to 1.2.0
 

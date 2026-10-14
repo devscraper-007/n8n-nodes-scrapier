@@ -54,37 +54,36 @@ const queries = node.description.properties.find(
 assert.ok(queries, 'google_search has a queries field');
 assert.strictEqual(queries.required, true);
 
-// Credit text must be the catalog's cost_credit, never a baked default. Reads
-// the app's endpoint snapshot when this runs inside the scrapier-app repo
-// (or ENDPOINTS_JSON points at one); otherwise falls back to the prices the
-// API charged when this was written: amazon-product 3, amazon-search 2,
-// youtube-search-full 5 (each was once baked as 1 from a stale snapshot).
-function expectedCredits(slugs) {
+// Credit text must come from the catalog's cost_credit, never a baked
+// default (amazon-product, amazon-search and youtube-search-full were once
+// all baked as "1 credit" from a stale snapshot). Structure is always
+// checked; the number itself is cross-checked against the app's endpoint
+// snapshot when this runs inside the scrapier-app repo (or ENDPOINTS_JSON
+// points at one). Prices are not pinned here: a price change must not fail a
+// publish.
+function snapshotCredits() {
 	const fs = require('fs');
 	const path = require('path');
 	const candidates = [process.env.ENDPOINTS_JSON, path.join(__dirname, '..', '..', 'src', 'assets', 'endpoints.json')]
 		.filter(Boolean);
 	const file = candidates.find((p) => fs.existsSync(p));
-	const pinned = { 'amazon-product': 3, 'amazon-search': 2, 'youtube-search-full': 5 };
-	if (!file) return pinned;
-	const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+	if (!file) return null;
 	const out = {};
-	for (const p of data.endpoints) {
-		for (const a of p.apis) {
-			const slug = a.endpoint.replace(/^\/+|\/+$/g, '');
-			if (slugs.includes(slug)) out[slug] = a.cost_credit;
-		}
+	for (const p of JSON.parse(fs.readFileSync(file, 'utf8')).endpoints) {
+		for (const a of p.apis) out[a.endpoint.replace(/^\/+|\/+$/g, '')] = a.cost_credit;
 	}
 	return out;
 }
 
 {
-	const slugs = ['amazon-product', 'amazon-search', 'youtube-search-full'];
-	const want = expectedCredits(slugs);
-	for (const slug of slugs) {
-		const op = opProp.options.find((o) => o.value === slug.replace(/-/g, '_'));
-		const text = `${want[slug]} credits per successful call`;
-		assert.ok(op.description.includes(text), `${op.value} description states "${text}": ${op.description}`);
+	const snapshot = snapshotCredits();
+	for (const op of opProp.options.filter((o) => o.value !== 'custom_scrape')) {
+		const m = /(\d+) credits? per successful call/.exec(op.description);
+		assert.ok(m, `${op.value} description states a credit price: ${op.description}`);
+		const slug = op.value.replace(/_/g, '-');
+		if (snapshot && slug in snapshot) {
+			assert.strictEqual(Number(m[1]), snapshot[slug], `${op.value} credit text matches cost_credit`);
+		}
 	}
 }
 

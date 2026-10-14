@@ -2,6 +2,15 @@
 
 ## 1.2.0
 
+> **Read this before upgrading: Google Search fails silently.** The API
+> ignores parameters it does not know (upstream `validators.py`: "Unknown
+> params -> silently ignored"), so existing workflows that set a removed Google
+> Search field (`cursor`, `site`, `quickDateRange`, `beforeDate`, `afterDate`,
+> `mobileResults`, `aiMode`, `hl`, `gl`, `maxPagesPerQuery`) will **not
+> error**. They quietly lose those filters and always receive **page 1**; a
+> loop keyed on `cursor` never advances. Add the new `page` field (and loop on `has_next_page` / `next_page`) before
+> updating the node, or check each Google Search node after the update.
+
 Operation definitions regenerated from the live Scrapier API v2 catalog.
 
 ### Breaking: Google Search
