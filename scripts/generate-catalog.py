@@ -1,21 +1,27 @@
 #!/usr/bin/env python3
 """Generate nodes/Scrapier/catalog.json from the app's endpoint catalog (the
-API v2 snapshot at scrapier-app/src/assets/endpoints.json) so the node's
-operations and fields never drift from the real API.
+API v2 snapshot, src/assets/endpoints.json in the scrapier-app repo) so the
+node's operations, fields and credit costs never drift from the real API.
 
-Usage: python3 scripts/generate-catalog.py   (from n8n-nodes-scrapier/)
+Credit costs are read from each endpoint's cost_credit, never hardcoded; an
+endpoint without one stops the run. Endpoints the catalog marks `disabled` are
+left out (with a warning) because they are not callable.
+
+Usage (from n8n-nodes-scrapier/):
+    python3 scripts/generate-catalog.py [--source PATH/TO/endpoints.json]
+
+The source is, in order: --source, the ENDPOINTS_JSON environment variable, or
+(only when this folder sits inside the scrapier-app repo) that repo's
+src/assets/endpoints.json. Anywhere else there is no default: a stale copy
+would silently bake stale prices into the node, so the run stops instead.
+Refresh the snapshot first with `npm run sync:endpoints` in scrapier-app.
 """
+import argparse
 import json
 import os
+import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-# Works from inside the scrapier-app monorepo or from this standalone repo
-# checked out next to it.
-_CANDIDATES = [
-    os.path.join(HERE, '..', '..', 'src', 'assets', 'endpoints.json'),
-    os.path.join(HERE, '..', '..', 'scrapier-app', 'src', 'assets', 'endpoints.json'),
-]
-ENDPOINTS_JSON = next((p for p in _CANDIDATES if os.path.exists(p)), _CANDIDATES[0])
 OUT = os.path.join(HERE, '..', 'nodes', 'Scrapier', 'catalog.json')
 
 CHOSEN = [
@@ -38,13 +44,42 @@ def label(slug):
     return ' '.join(w.capitalize() for w in slug.replace('_', '-').split('-'))
 
 
-def credit_text(cost):
+def credit_text(slug, api):
     # v2 bills cost_credit once per successful call, whatever the page holds.
+    cost = api.get('cost_credit')
+    if not isinstance(cost, (int, float)) or isinstance(cost, bool) or cost <= 0:
+        raise SystemExit(f'{slug}: catalog has no usable cost_credit ({cost!r}); refusing to guess a price.')
+    cost = int(cost) if float(cost).is_integer() else cost
     return f'{cost} credit' if cost == 1 else f'{cost} credits'
 
 
-def build():
-    with open(ENDPOINTS_JSON) as f:
+def resolve_source(cli_value):
+    """--source, then $ENDPOINTS_JSON, then the in-repo file when (and only
+    when) this folder lives inside the scrapier-app repo."""
+    explicit = cli_value or os.environ.get('ENDPOINTS_JSON')
+    if explicit:
+        path = os.path.abspath(explicit)
+        if not os.path.isfile(path):
+            raise SystemExit(f'Endpoint catalog not found: {path}\n(from {"--source" if cli_value else "$ENDPOINTS_JSON"})')
+        return path
+    root = os.path.abspath(os.path.join(HERE, '..', '..'))
+    pkg = os.path.join(root, 'package.json')
+    candidate = os.path.join(root, 'src', 'assets', 'endpoints.json')
+    try:
+        with open(pkg) as f:
+            in_monorepo = json.load(f).get('name') == 'scrapier-app'
+    except (OSError, ValueError):
+        in_monorepo = False
+    if in_monorepo and os.path.isfile(candidate):
+        return candidate
+    raise SystemExit(
+        'No endpoint catalog given. Pass --source PATH or set ENDPOINTS_JSON to the scrapier-app\n'
+        'repo\'s src/assets/endpoints.json (run `npm run sync:endpoints` there first so it is current).\n'
+        'There is deliberately no default outside the scrapier-app repo.')
+
+
+def build(source):
+    with open(source) as f:
         data = json.load(f)
 
     by_slug = {}
@@ -56,8 +91,12 @@ def build():
     if missing:
         raise SystemExit(f'Endpoints missing from endpoints.json: {missing}')
 
+    disabled = [s for s in CHOSEN if by_slug[s].get('disabled')]
+    for s in disabled:
+        print(f'WARNING: {s} is disabled in the catalog; leaving it out of the node.', file=sys.stderr)
+
     operations = []
-    for slug in CHOSEN:
+    for slug in (s for s in CHOSEN if s not in disabled):
         api = by_slug[slug]
         fields = []
         for pname, meta in (api.get('input') or {}).items():
@@ -84,7 +123,7 @@ def build():
             'key': slug.replace('-', '_'),
             'slug': slug,
             'label': label(slug),
-            'description': f'{label(slug)} ({credit_text(api.get("cost_credit", 1))} per successful call)',
+            'description': f'{label(slug)} ({credit_text(slug, api)} per successful call)',
             'fields': fields,
         })
 
@@ -92,8 +131,10 @@ def build():
     with open(OUT, 'w') as f:
         json.dump(operations, f, indent=2)
         f.write('\n')
-    print(f'Wrote {len(operations)} operations to {OUT}')
+    print(f'Wrote {len(operations)} operations to {OUT} (from {source})')
 
 
 if __name__ == '__main__':
-    build()
+    ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
+    ap.add_argument('--source', help='path to the scrapier-app endpoints.json (or set ENDPOINTS_JSON)')
+    build(resolve_source(ap.parse_args().source))

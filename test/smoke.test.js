@@ -35,10 +35,12 @@ const propNames = node.description.properties.map((p) => p.name);
 assert.ok(!propNames.includes('webhookUrl'), 'webhookUrl option removed');
 assert.ok(!propNames.includes('splitRows'), 'splitRows option removed');
 
-const cursor = node.description.properties.find(
-	(p) => p.name === 'cursor' && p.displayOptions.show.operation.includes('google_search'),
+// google_search pages by number (`page`); the other curated operations take a
+// `cursor` token.
+const pagination = node.description.properties.find(
+	(p) => (p.name === 'page' || p.name === 'cursor') && p.displayOptions.show.operation.includes('google_search'),
 );
-assert.ok(cursor, 'google_search exposes a pagination cursor');
+assert.ok(pagination, 'google_search exposes a pagination input (page or cursor)');
 
 const queries = node.description.properties.find(
 	(p) => p.name === 'queries' && p.displayOptions.show.operation.includes('google_search'),

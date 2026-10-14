@@ -52,6 +52,12 @@ python3 scripts/generate-catalog.py   # refresh nodes/Scrapier/catalog.json
 npm run build
 ```
 
+Inside the scrapier-app repo the generator reads `../src/assets/endpoints.json`
+(refresh it with `npm run sync:endpoints` at the repo root first). Elsewhere pass
+`--source /path/to/endpoints.json` or set `ENDPOINTS_JSON`; there is no default.
+Credit costs are read from each endpoint's `cost_credit`, and endpoints marked
+`disabled` are left out.
+
 ## Install (users)
 
 **Self-hosted n8n:** Settings → Community Nodes → Install → enter

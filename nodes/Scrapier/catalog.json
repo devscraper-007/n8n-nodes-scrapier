@@ -10,23 +10,23 @@
         "label": "Queries",
         "type": "string",
         "required": true,
-        "description": "Search keyword. Required first call.",
+        "description": "Search keyword (max 2048 characters). Required on every call.",
         "default": "latest technology news"
       },
       {
-        "name": "cursor",
-        "label": "Cursor",
-        "type": "string",
+        "name": "page",
+        "label": "Page",
+        "type": "number",
         "required": false,
-        "description": "Pagination cursor returned in the previous response's `next_cursor`. Pass it back unchanged to fetch the next page. When `next_cursor` is null, you have reached the last page.",
-        "default": ""
+        "description": "Google result page to fetch (1-50, 10 results per page). Request any page directly (1, 2, 3 ...) with the same query and filters; the response's `next_page` is null when there are no more results.",
+        "default": 1
       },
       {
         "name": "countryCode",
         "label": "Countrycode",
         "type": "string",
         "required": false,
-        "description": "Country (gl) code. Locked in cursor.",
+        "description": "Country code (e.g. us, gb, de).",
         "default": "us"
       },
       {
@@ -34,88 +34,32 @@
         "label": "Languagecode",
         "type": "string",
         "required": false,
-        "description": "UI language (hl). Locked in cursor.",
+        "description": "UI language code (e.g. en, fr, de).",
         "default": "en"
       },
       {
-        "name": "site",
-        "label": "Site",
+        "name": "dateRange",
+        "label": "Daterange",
         "type": "string",
         "required": false,
-        "description": "Optional site: filter. Locked in cursor.",
-        "default": ""
-      },
-      {
-        "name": "quickDateRange",
-        "label": "Quickdaterange",
-        "type": "string",
-        "required": false,
-        "description": "Optional date filter (h/d/w/m/y). Locked in cursor.",
-        "default": ""
-      },
-      {
-        "name": "beforeDate",
-        "label": "Beforedate",
-        "type": "string",
-        "required": false,
-        "description": "Optional before:YYYY-MM-DD. Locked in cursor.",
-        "default": ""
-      },
-      {
-        "name": "afterDate",
-        "label": "Afterdate",
-        "type": "string",
-        "required": false,
-        "description": "Optional after:YYYY-MM-DD. Locked in cursor.",
-        "default": ""
-      },
-      {
-        "name": "mobileResults",
-        "label": "Mobileresults",
-        "type": "boolean",
-        "required": false,
-        "description": "Mobile user-agent SERP. Locked in cursor.",
-        "default": false
-      },
-      {
-        "name": "aiMode",
-        "label": "Aimode",
-        "type": "string",
-        "required": false,
-        "description": "aiModeOff | aiModeOn. Locked in cursor.",
-        "default": "aiModeOff"
-      },
-      {
-        "name": "hl",
-        "label": "Hl",
-        "type": "string",
-        "required": false,
-        "description": "Interface language (alias for languageCode)",
-        "default": "en"
-      },
-      {
-        "name": "gl",
-        "label": "Gl",
-        "type": "string",
-        "required": false,
-        "description": "Geolocation country code (alias for countryCode)",
-        "default": "us"
-      },
-      {
-        "name": "maxPagesPerQuery",
-        "label": "Maxpagesperquery",
-        "type": "number",
-        "required": false,
-        "description": "Result pages to scrape per query (capped at 100)",
-        "default": 1
+        "description": "Only results published in this period. For `custom`, send the range itself as the value: `YYYY-MM-DD,YYYY-MM-DD` (both days included), e.g. `2024-03-01,2024-03-31`. One side may be empty: `2024-03-01,` = since, `,2024-03-31` = until.",
+        "default": "any_time"
       },
       {
         "name": "use_proxy",
         "label": "Use Proxy",
         "type": "boolean",
         "required": false,
-        "description": "Use platform _proxy_url when true (default: true)",
+        "description": "Use Scrapier's residential proxy pool when true (default: true)",
         "default": true
+      },
+      {
+        "name": "raw_data",
+        "label": "Raw Data",
+        "type": "boolean",
+        "required": false,
+        "description": "When true, the response carries the full raw upstream payload(s) the scraper received (GraphQL / JSON API bodies, HTML, embedded JSON-LD -- exactly as the platform returned them) under `raw_responses`, in place of the formatted items. When false (default) you get the formatted output. Pagination (`cursor` / `next_cursor`) works the same in both modes.",
+        "default": false
       }
     ]
   },
@@ -130,7 +74,7 @@
         "label": "Queries",
         "type": "string",
         "required": true,
-        "description": "Place search keyword. Required first call.",
+        "description": "Place search keyword. Required first call. 20 places per page, no duplicate place_ids across pages.",
         "default": "coffee shops"
       },
       {
@@ -146,7 +90,7 @@
         "label": "Location",
         "type": "string",
         "required": false,
-        "description": "Geocode anchor for the search (city, address, or \"lat,lng\"). Locked in cursor.",
+        "description": "Geocode anchor for the search (city or address). Locked in cursor.",
         "default": "Houston,Texas"
       },
       {
@@ -154,7 +98,7 @@
         "label": "Language",
         "type": "string",
         "required": false,
-        "description": "Language. Locked in cursor.",
+        "description": "Result language (Google hl code). Locked in cursor.",
         "default": "en"
       },
       {
@@ -162,7 +106,7 @@
         "label": "Country",
         "type": "string",
         "required": false,
-        "description": "Country bias. Locked in cursor.",
+        "description": "Ignored -- country bias is derived from the geocoded location.",
         "default": "us"
       },
       {
@@ -170,7 +114,15 @@
         "label": "Use Proxy",
         "type": "boolean",
         "required": false,
-        "description": "Use platform _proxy_url when true (default: false for this endpoint)",
+        "description": "Use Scrapier's residential proxy pool when true (default: true)",
+        "default": true
+      },
+      {
+        "name": "raw_data",
+        "label": "Raw Data",
+        "type": "boolean",
+        "required": false,
+        "description": "When true, the response carries the full raw upstream payload(s) the scraper received (GraphQL / JSON API bodies, HTML, embedded JSON-LD -- exactly as the platform returned them) under `raw_responses`, in place of the formatted items. When false (default) you get the formatted output. Pagination (`cursor` / `next_cursor`) works the same in both modes.",
         "default": false
       }
     ]
@@ -179,14 +131,14 @@
     "key": "amazon_product",
     "slug": "amazon-product",
     "label": "Amazon Product",
-    "description": "Amazon Product (1 credit per successful call)",
+    "description": "Amazon Product (3 credits per successful call)",
     "fields": [
       {
         "name": "query",
         "label": "Query",
         "type": "string",
         "required": false,
-        "description": "Search keyword. Builds https://www.amazon.com/s?k=\u2026 when url is omitted. Required first call unless url given. Aliases: queries, keyword, q.",
+        "description": "Search keyword. Builds the marketplace search URL (see location_name / se_domain) when url is omitted. Required first call unless url given. Aliases: queries, keyword, q.",
         "default": "keyboard"
       },
       {
@@ -206,12 +158,124 @@
         "default": ""
       },
       {
+        "name": "location_name",
+        "label": "Location Name",
+        "type": "string",
+        "required": false,
+        "description": "Marketplace + delivery location. Sets the Amazon domain, currency and delivery ZIP (prices/delivery dates as a shopper there sees them). Aliases: location, location_code (e.g. 2840), country (ISO2).",
+        "default": "United States"
+      },
+      {
+        "name": "language_name",
+        "label": "Language Name",
+        "type": "string",
+        "required": false,
+        "description": "Storefront language, as a name (\"English (United States)\") or code (en_US). Default: the marketplace language. Aliases: language, language_code.",
+        "default": ""
+      },
+      {
+        "name": "se_domain",
+        "label": "Se Domain",
+        "type": "string",
+        "required": false,
+        "description": "Amazon domain override (amazon.com, amazon.co.uk, amazon.de, \u2026). Default: chosen from location_name.",
+        "default": ""
+      },
+      {
+        "name": "zip_code",
+        "label": "Zip Code",
+        "type": "string",
+        "required": false,
+        "description": "Delivery postal code override (default: the marketplace capital, e.g. 10001 for the US). Aliases: postal_code, zip.",
+        "default": ""
+      },
+      {
+        "name": "set_delivery_location",
+        "label": "Set Delivery Location",
+        "type": "boolean",
+        "required": false,
+        "description": "Pin the session delivery location to zip_code before scraping (2 extra requests per session). false = whatever location Amazon infers from the proxy IP (off-country IPs may get no prices).",
+        "default": true
+      },
+      {
+        "name": "price_min",
+        "label": "Price Min",
+        "type": "number",
+        "required": false,
+        "description": "Minimum product price (marketplace currency).",
+        "default": null
+      },
+      {
+        "name": "price_max",
+        "label": "Price Max",
+        "type": "number",
+        "required": false,
+        "description": "Maximum product price (marketplace currency).",
+        "default": null
+      },
+      {
+        "name": "sort_by",
+        "label": "Sort By",
+        "type": "string",
+        "required": false,
+        "description": "Result sorting. Default: Amazon's \"Featured\" order.",
+        "default": ""
+      },
+      {
+        "name": "department",
+        "label": "Department",
+        "type": "string",
+        "required": false,
+        "description": "Amazon department, e.g. \"Electronics\", \"Books\", \"Home & Kitchen\" (or a raw search alias like \"electronics\").",
+        "default": ""
+      },
+      {
+        "name": "search_param",
+        "label": "Search Param",
+        "type": "string",
+        "required": false,
+        "description": "Extra Amazon search URL params, e.g. \"&rh=p_72:1248882011\". Ignored when price_min, price_max or sort_by is set.",
+        "default": ""
+      },
+      {
+        "name": "tag",
+        "label": "Tag",
+        "type": "string",
+        "required": false,
+        "description": "Your own identifier (max 255 chars), echoed on every result.",
+        "default": ""
+      },
+      {
+        "name": "depth",
+        "label": "Depth",
+        "type": "number",
+        "required": false,
+        "description": "Max products across all pages, organic + sponsored (max 700). Pagination stops once reached. Locked in cursor. Alias: max_items.",
+        "default": 100
+      },
+      {
+        "name": "max_crawl_pages",
+        "label": "Max Crawl Pages",
+        "type": "number",
+        "required": false,
+        "description": "Max search-result pages to walk; next_cursor is null after this page. Locked in cursor. Alias: max_pages.",
+        "default": 7
+      },
+      {
         "name": "use_proxy",
         "label": "Use Proxy",
         "type": "boolean",
         "required": false,
-        "description": "Use platform _proxy_url when true (default: true)",
+        "description": "Use Scrapier's residential proxy pool when true (default: true)",
         "default": true
+      },
+      {
+        "name": "raw_data",
+        "label": "Raw Data",
+        "type": "boolean",
+        "required": false,
+        "description": "When true, the response carries the full raw upstream payload(s) the scraper received (GraphQL / JSON API bodies, HTML, embedded JSON-LD -- exactly as the platform returned them) under `raw_responses`, in place of the formatted items. When false (default) you get the formatted output. Pagination (`cursor` / `next_cursor`) works the same in both modes.",
+        "default": false
       }
     ]
   },
@@ -219,7 +283,7 @@
     "key": "amazon_search",
     "slug": "amazon-search",
     "label": "Amazon Search",
-    "description": "Amazon Search (1 credit per successful call)",
+    "description": "Amazon Search (2 credits per successful call)",
     "fields": [
       {
         "name": "query",
@@ -242,7 +306,7 @@
         "label": "Domain Code",
         "type": "string",
         "required": false,
-        "description": "Amazon domain (com, co.uk, de, ...). Locked in cursor.",
+        "description": "Amazon marketplace: com, co.uk, de, in, ca, it, es, fr (fr is AWS-WAF gated and may return 502). Locked in cursor.",
         "default": "com"
       },
       {
@@ -282,7 +346,7 @@
         "label": "Max Pages",
         "type": "number",
         "required": false,
-        "description": "Maximum pages to scrape per search term (GET capped at 10)",
+        "description": "First call only: front-load this many Amazon result pages (capped at 10). Cursor calls return one page (plus a refill page when it comes back thin).",
         "default": 1
       },
       {
@@ -290,8 +354,16 @@
         "label": "Use Proxy",
         "type": "boolean",
         "required": false,
-        "description": "Use platform _proxy_url when true (default: true)",
+        "description": "Use Scrapier's residential proxy pool when true (default: true)",
         "default": true
+      },
+      {
+        "name": "raw_data",
+        "label": "Raw Data",
+        "type": "boolean",
+        "required": false,
+        "description": "When true, the response carries the full raw upstream payload(s) the scraper received (GraphQL / JSON API bodies, HTML, embedded JSON-LD -- exactly as the platform returned them) under `raw_responses`, in place of the formatted items. When false (default) you get the formatted output. Pagination (`cursor` / `next_cursor`) works the same in both modes.",
+        "default": false
       }
     ]
   },
@@ -299,7 +371,7 @@
     "key": "youtube_search_full",
     "slug": "youtube-search-full",
     "label": "Youtube Search Full",
-    "description": "Youtube Search Full (1 credit per successful call)",
+    "description": "Youtube Search Full (5 credits per successful call)",
     "fields": [
       {
         "name": "queries",
@@ -322,15 +394,15 @@
         "label": "Max Results Video",
         "type": "number",
         "required": false,
-        "description": "Max regular videos per page (0 = exclude). Locked into the cursor.",
-        "default": 10
+        "description": "Max regular videos returned per page (0 = exclude). One page = one native YouTube search page (~20 videos). Locked into the cursor.",
+        "default": 20
       },
       {
         "name": "max_results_shorts",
         "label": "Max Results Shorts",
         "type": "number",
         "required": false,
-        "description": "Max shorts per page (0 = exclude). Locked into the cursor.",
+        "description": "Max shorts returned per page (0 = exclude; videos=0 + shorts>0 switches to YouTube's Shorts-only search). Locked into the cursor.",
         "default": 10
       },
       {
@@ -338,15 +410,55 @@
         "label": "Max Results Streams",
         "type": "number",
         "required": false,
-        "description": "Max live streams per page (0 = exclude). Locked into the cursor.",
+        "description": "Max currently-live streams per page (0 = exclude). Locked into the cursor.",
         "default": 0
+      },
+      {
+        "name": "sort_by",
+        "label": "Sort By",
+        "type": "string",
+        "required": false,
+        "description": "Sort order: relevance | upload_date | view_count | rating (applied server-side by YouTube)",
+        "default": "relevance"
+      },
+      {
+        "name": "upload_date",
+        "label": "Upload Date",
+        "type": "string",
+        "required": false,
+        "description": "Upload-date filter: hour | today | week | month | year (empty = any time)",
+        "default": ""
+      },
+      {
+        "name": "duration",
+        "label": "Duration",
+        "type": "string",
+        "required": false,
+        "description": "Duration filter: short (<4 min) | medium (4-20 min) | long (>20 min) (empty = any)",
+        "default": ""
+      },
+      {
+        "name": "country",
+        "label": "Country",
+        "type": "string",
+        "required": false,
+        "description": "Result region (2-letter country code, YouTube `gl`)",
+        "default": "US"
+      },
+      {
+        "name": "language",
+        "label": "Language",
+        "type": "string",
+        "required": false,
+        "description": "Interface language for result texts (YouTube `hl`, e.g. en, es, de)",
+        "default": "en"
       },
       {
         "name": "download_subtitles",
         "label": "Download Subtitles",
         "type": "boolean",
         "required": false,
-        "description": "Download transcripts. Locked into the cursor.",
+        "description": "Fetch the transcript + caption language list for each video (true/false). Best-effort within the per-call time budget; rows always carry details first",
         "default": true
       },
       {
@@ -354,7 +466,7 @@
         "label": "Subtitles Language",
         "type": "string",
         "required": false,
-        "description": "Transcript language code. Locked into the cursor.",
+        "description": "Preferred transcript language code (e.g. \"en\", \"es\", \"fr\"); falls back to an auto-translation or the original track",
         "default": "en"
       },
       {
@@ -362,7 +474,7 @@
         "label": "Subtitles Format",
         "type": "string",
         "required": false,
-        "description": "Transcript format \u2014 text or srt. Locked into the cursor.",
+        "description": "Transcript format: srt | text | timestamp (JSON list of {start, duration, text})",
         "default": "srt"
       },
       {
@@ -370,23 +482,15 @@
         "label": "Fetch Metadata",
         "type": "boolean",
         "required": false,
-        "description": "Fetch detailed metadata (likes, comments, subscribers). Locked into the cursor.",
+        "description": "Enrich each video with exact likes, full description, tags, category, publish date, subscribers and comment count (true/false)",
         "default": true
-      },
-      {
-        "name": "max_pages_per_query",
-        "label": "Max Pages Per Query",
-        "type": "number",
-        "required": false,
-        "description": "Max upstream search pages per query. Locked into the cursor.",
-        "default": 50
       },
       {
         "name": "isHD",
         "label": "Ishd",
         "type": "boolean",
         "required": false,
-        "description": "Filter: HD only. Locked into the cursor.",
+        "description": "Filter: HD only (server-side YouTube filter)",
         "default": false
       },
       {
@@ -394,7 +498,7 @@
         "label": "Is4k",
         "type": "boolean",
         "required": false,
-        "description": "Filter: 4K only. Locked into the cursor.",
+        "description": "Filter: 4K only (server-side YouTube filter)",
         "default": false
       },
       {
@@ -402,7 +506,7 @@
         "label": "Islive",
         "type": "boolean",
         "required": false,
-        "description": "Filter: live streams only. Locked into the cursor.",
+        "description": "Filter: live streams only (server-side; enables streams automatically)",
         "default": false
       },
       {
@@ -410,7 +514,7 @@
         "label": "Hassubtitles",
         "type": "boolean",
         "required": false,
-        "description": "Filter: videos with subtitles only. Locked into the cursor.",
+        "description": "Filter: videos with subtitles/CC only (server-side YouTube filter)",
         "default": false
       },
       {
@@ -418,8 +522,16 @@
         "label": "Use Proxy",
         "type": "boolean",
         "required": false,
-        "description": "Use platform _proxy_url when true (default: true)",
+        "description": "Use Scrapier's residential proxy pool when true (default: true)",
         "default": true
+      },
+      {
+        "name": "raw_data",
+        "label": "Raw Data",
+        "type": "boolean",
+        "required": false,
+        "description": "When true, the response carries the full raw upstream payload(s) the scraper received (GraphQL / JSON API bodies, HTML, embedded JSON-LD -- exactly as the platform returned them) under `raw_responses`, in place of the formatted items. When false (default) you get the formatted output. Pagination (`cursor` / `next_cursor`) works the same in both modes.",
+        "default": false
       }
     ]
   },
@@ -450,8 +562,16 @@
         "label": "Use Proxy",
         "type": "boolean",
         "required": false,
-        "description": "Use platform _proxy_url when true (default: true)",
+        "description": "Use Scrapier's residential proxy pool when true (default: true)",
         "default": true
+      },
+      {
+        "name": "raw_data",
+        "label": "Raw Data",
+        "type": "boolean",
+        "required": false,
+        "description": "When true, the response carries the full raw upstream payload(s) the scraper received (GraphQL / JSON API bodies, HTML, embedded JSON-LD -- exactly as the platform returned them) under `raw_responses`, in place of the formatted items. When false (default) you get the formatted output. Pagination (`cursor` / `next_cursor`) works the same in both modes.",
+        "default": false
       }
     ]
   },
@@ -490,8 +610,16 @@
         "label": "Use Proxy",
         "type": "boolean",
         "required": false,
-        "description": "Use platform _proxy_url when true (default: true)",
+        "description": "Use Scrapier's residential proxy pool when true (default: true)",
         "default": true
+      },
+      {
+        "name": "raw_data",
+        "label": "Raw Data",
+        "type": "boolean",
+        "required": false,
+        "description": "When true, the response carries the full raw upstream payload(s) the scraper received (GraphQL / JSON API bodies, HTML, embedded JSON-LD -- exactly as the platform returned them) under `raw_responses`, in place of the formatted items. When false (default) you get the formatted output. Pagination (`cursor` / `next_cursor`) works the same in both modes.",
+        "default": false
       }
     ]
   },
@@ -522,8 +650,16 @@
         "label": "Use Proxy",
         "type": "boolean",
         "required": false,
-        "description": "Use platform _proxy_url when true (default: true)",
+        "description": "Use Scrapier's residential proxy pool when true (default: true)",
         "default": true
+      },
+      {
+        "name": "raw_data",
+        "label": "Raw Data",
+        "type": "boolean",
+        "required": false,
+        "description": "When true, the response carries the full raw upstream payload(s) the scraper received (GraphQL / JSON API bodies, HTML, embedded JSON-LD -- exactly as the platform returned them) under `raw_responses`, in place of the formatted items. When false (default) you get the formatted output. Pagination (`cursor` / `next_cursor`) works the same in both modes.",
+        "default": false
       }
     ]
   },
@@ -554,8 +690,16 @@
         "label": "Use Proxy",
         "type": "boolean",
         "required": false,
-        "description": "Use platform _proxy_url when true (default: true)",
+        "description": "Use Scrapier's residential proxy pool when true (default: true)",
         "default": true
+      },
+      {
+        "name": "raw_data",
+        "label": "Raw Data",
+        "type": "boolean",
+        "required": false,
+        "description": "When true, the response carries the full raw upstream payload(s) the scraper received (GraphQL / JSON API bodies, HTML, embedded JSON-LD -- exactly as the platform returned them) under `raw_responses`, in place of the formatted items. When false (default) you get the formatted output. Pagination (`cursor` / `next_cursor`) works the same in both modes.",
+        "default": false
       }
     ]
   },
@@ -610,8 +754,16 @@
         "label": "Use Proxy",
         "type": "boolean",
         "required": false,
-        "description": "Use platform _proxy_url when true (default: true)",
+        "description": "Use Scrapier's residential proxy pool when true (default: true)",
         "default": true
+      },
+      {
+        "name": "raw_data",
+        "label": "Raw Data",
+        "type": "boolean",
+        "required": false,
+        "description": "When true, the response carries the full raw upstream payload(s) the scraper received (GraphQL / JSON API bodies, HTML, embedded JSON-LD -- exactly as the platform returned them) under `raw_responses`, in place of the formatted items. When false (default) you get the formatted output. Pagination (`cursor` / `next_cursor`) works the same in both modes.",
+        "default": false
       }
     ]
   }
