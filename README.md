@@ -32,9 +32,9 @@ The live catalog currently has **197 callable endpoints across 36 platforms**; t
   to the previous page's `next_cursor` (e.g. `{{ $json.next_cursor }}` in a
   loop) to fetch the next page; required inputs are ignored when a cursor is
   supplied. `next_cursor` is `null` on the last page. **Google Search is the
-  exception: it pages by number.** Set **Page** (1-50, 10 results per page)
-  and keep going while the response's `has_next_page` is `true` (`next_page`
-  is the next number, `null` on the last page); it has no cursor.
+  exception: it pages by number.** Set **Page** and keep going while the
+  response's `has_next_page` is `true` (`next_page` is the next number, `null` on
+  the last page); it has no cursor. The field description shows the allowed range.
 - **Errors** — a failed call (`"success": false`) fails the node with the
   API's error message, or outputs `{ "error": "..." }` when *Continue On
   Fail* is enabled.
@@ -50,21 +50,28 @@ Each successful call costs the endpoint's credit price (from 1 credit per succes
 The operation definitions were regenerated from the live API catalog.
 **Google Search is a breaking change for existing workflows:**
 
-- Removed fields: **Cursor**, **Site**, **Quick Date Range**, **Before
-  Date**, **After Date**, **Mobile Results**, **AI Mode**, **hl**, **gl**,
-  **Max Pages Per Query**. The API no longer accepts them (they are not
-  aliases), so a workflow that set one must change.
-- Added fields: **Page**, **Date Range** (`any_time`, `past_7_days`,
-  `past_3_weeks`, `past_6_months`, `past_2_years`, `custom`) and **Raw Data**.
-  Use **Country Code** / **Language Code** in place of gl / hl.
-- Google Search now pages by **Page** / `next_page` / `has_next_page`, not
-  by cursor.
-- **Youtube Search Full**: **Max Pages Per Query** is removed; **Sort By**,
-  **Upload Date**, **Duration**, **Country** and **Language** are added.
-- Every operation gains an optional **Raw Data** field. Amazon Product gains
-  the location, price, department and crawl-depth fields its API accepts.
-- Credit costs in the descriptions now match the API: Amazon Product 3,
-  Amazon Search 2, Youtube Search Full 5 (they previously read 1).
+- Removed fields: `cursor`, `site`, `quickDateRange`, `beforeDate`,
+  `afterDate`, `mobileResults`, `aiMode`, `hl`, `gl`, `maxPagesPerQuery`. The
+  API no longer accepts them (they are not aliases) and silently ignores
+  unknown parameters, so a workflow that set one keeps running but loses that
+  setting: check every Google Search node.
+- Added fields: `page`, `dateRange` (`any_time`, `past_7_days`,
+  `past_3_weeks`, `past_6_months`, `past_2_years`, `custom`) and `raw_data`.
+  Use `countryCode` / `languageCode` in place of `gl` / `hl`.
+- Google Search now pages by `page` / `next_page` / `has_next_page`, not by
+  cursor.
+- **YouTube Search** (`youtube_search_full`): `max_pages_per_query` is removed;
+  `sort_by`, `upload_date`, `duration`, `country` and `language` are added.
+- Every operation gains an optional `raw_data` field. Amazon Product gains the
+  location, price, department and crawl-depth fields its API accepts.
+- Default changes that happen without any error: Google Maps `use_proxy`
+  `false` -> `true`; YouTube Search `max_results_video` `10` -> `20`. Set them
+  explicitly if you rely on the old values.
+- Number fields without a catalog default (e.g. Amazon Product `price_min` /
+  `price_max`) are now empty and not sent; earlier builds sent `0`.
+- Operation descriptions now show the credit price from the catalog. Amazon
+  Product, Amazon Search and YouTube Search used to show a stale 1 credit;
+  billing itself did not change.
 
 See `CHANGELOG.md`.
 
@@ -73,7 +80,7 @@ See `CHANGELOG.md`.
 Version 1.1.0 moves to API v2 and is a breaking change for some workflows:
 
 - **Google Map Reviews** is removed (not available in API v2).
-- **Youtube Search** is replaced by **Youtube Search Full**.
+- **Youtube Search** is replaced by **YouTube Search** (`youtube_search_full`).
 - The **Webhook URL** option is removed; v2 returns results directly.
 - The **Split Rows Into Items** option is removed; output is one item per
   page (see above).
