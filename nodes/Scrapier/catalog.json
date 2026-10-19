@@ -66,8 +66,8 @@
   {
     "key": "google_maps",
     "slug": "google-maps",
-    "label": "Google Maps",
-    "description": "Google Maps (1 credit per successful call)",
+    "label": "Google Maps Places",
+    "description": "Google Maps Places (1 credit per successful call)",
     "fields": [
       {
         "name": "queries",
@@ -130,8 +130,8 @@
   {
     "key": "amazon_product",
     "slug": "amazon-product",
-    "label": "Amazon Product",
-    "description": "Amazon Product (3 credits per successful call)",
+    "label": "Amazon Product Scraper",
+    "description": "Amazon Product Scraper (3 credits per successful call)",
     "fields": [
       {
         "name": "query",
@@ -370,8 +370,8 @@
   {
     "key": "youtube_search_full",
     "slug": "youtube-search-full",
-    "label": "Youtube Search Full",
-    "description": "Youtube Search Full (5 credits per successful call)",
+    "label": "YouTube Search",
+    "description": "YouTube Search (5 credits per successful call)",
     "fields": [
       {
         "name": "queries",
@@ -538,8 +538,8 @@
   {
     "key": "tiktok_profile",
     "slug": "tiktok-profile",
-    "label": "Tiktok Profile",
-    "description": "Tiktok Profile (1 credit per successful call)",
+    "label": "TikTok Profile Videos",
+    "description": "TikTok Profile Videos (1 credit per successful call)",
     "fields": [
       {
         "name": "usernames",
@@ -626,8 +626,8 @@
   {
     "key": "linkedin_profile",
     "slug": "linkedin-profile",
-    "label": "Linkedin Profile",
-    "description": "Linkedin Profile (1 credit per successful call)",
+    "label": "LinkedIn Profile",
+    "description": "LinkedIn Profile (1 credit per successful call)",
     "fields": [
       {
         "name": "urls",
@@ -706,8 +706,8 @@
   {
     "key": "duckduckgo_search",
     "slug": "duckduckgo-search",
-    "label": "Duckduckgo Search",
-    "description": "Duckduckgo Search (1 credit per successful call)",
+    "label": "DuckDuckGo Search Scraper",
+    "description": "DuckDuckGo Search Scraper (1 credit per successful call)",
     "fields": [
       {
         "name": "query",
