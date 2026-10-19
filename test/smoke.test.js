@@ -187,6 +187,47 @@ function makeCtx(params, response, { continueOnFail = false } = {}) {
 	assert.strictEqual(optCalls, 1, 'second open is served from the cache');
 	assert.strictEqual(opts.length, 3, 'cached list survives a later outage');
 
+	// Default parameters: a number field whose catalog default is null must be
+	// unset ('' in the UI) and must NOT be sent. Otherwise e.g. Amazon Product
+	// would send price_min:0 / price_max:0 and quietly filter everything out.
+	const nullNumberFields = [];
+	for (const op of generated) {
+		const defaults = {};
+		const numberFieldsWithoutDefault = new Set();
+		for (const f of op.fields) {
+			const prop = fieldsOf(op.key).find((p) => p.name === f.name);
+			assert.ok(prop, `${op.key}.${f.name} is exposed`);
+			defaults[f.name] = prop.default;
+			if (f.type === 'number' && (f.default === null || f.default === undefined)) {
+				numberFieldsWithoutDefault.add(f.name);
+				nullNumberFields.push(`${op.key}.${f.name}`);
+				assert.strictEqual(prop.default, '', `${op.key}.${f.name} has no catalog default, so the UI default is empty`);
+			}
+		}
+		const c = makeCtx(
+			{ ...defaults, operation: op.key },
+			{ statusCode: 200, headers: {}, body: { success: true, data: {} } },
+		);
+		await node.execute.call(c);
+		for (const name of numberFieldsWithoutDefault) {
+			assert.ok(!(name in c.calls[0].body), `${op.key}: ${name} (no catalog default) is not sent with default parameters`);
+		}
+		// Numeric fields that DO have a catalog default keep sending it.
+		for (const f of op.fields) {
+			if (f.type === 'number' && typeof f.default === 'number') {
+				assert.strictEqual(c.calls[0].body[f.name], f.default, `${op.key}.${f.name} sends its catalog default`);
+			}
+		}
+	}
+	assert.ok(nullNumberFields.length > 0, 'at least one number field without a default is covered (amazon_product price_min/price_max)');
+	// An explicit 0 is still a value the user chose, and is sent.
+	ctx = makeCtx(
+		{ operation: 'amazon_product', price_min: 0 },
+		{ statusCode: 200, headers: {}, body: { success: true, data: {} } },
+	);
+	await node.execute.call(ctx);
+	assert.strictEqual(ctx.calls[0].body.price_min, 0, 'an explicit 0 is sent');
+
 	// Failure: throws with the API's error message.
 	const failBody = { success: false, error: 'Invalid cursor' };
 	ctx = makeCtx(

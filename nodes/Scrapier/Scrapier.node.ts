@@ -60,7 +60,9 @@ const fieldProperties: INodeProperties[] = operations.flatMap((op) =>
 		let defaultValue: string | number | boolean = field.default ?? '';
 		if (field.type === 'number') {
 			type = 'number';
-			defaultValue = typeof field.default === 'number' ? field.default : 0;
+			// No catalog default -> leave the field empty. execute() skips empty values, so
+			// the parameter is not sent at all (a 0 here would be sent as price_min: 0).
+			defaultValue = typeof field.default === 'number' ? field.default : '';
 		} else if (field.type === 'boolean') {
 			type = 'boolean';
 			defaultValue = field.default === true;
