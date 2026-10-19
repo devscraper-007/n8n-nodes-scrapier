@@ -104,7 +104,7 @@ def build(source, force=False, allow_drop=(), summary_file=None):
 
     st = cs.stats(by_slug)
     cs.update_marked_block(README, (
-        f'The live catalog currently has **{st["endpoints"]} endpoints across {st["platforms"]} platforms**; '
+        f'The live catalog currently has **{st["endpoints"]} callable endpoints across {st["platforms"]} platforms**; '
         f'this node has **{len(operations) + 1} operations** ({len(operations)} curated scrapers plus '
         '**Custom Scrape**, which reaches every other endpoint by slug).'))
     cs.update_marked_block(README, (

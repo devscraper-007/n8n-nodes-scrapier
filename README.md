@@ -21,7 +21,7 @@ endpoints are callable the day they ship, with no node update.
   catalog) or type it.
 
 <!-- catalog:start -->
-The live catalog currently has **197 endpoints across 36 platforms**; this node has **11 operations** (10 curated scrapers plus **Custom Scrape**, which reaches every other endpoint by slug).
+The live catalog currently has **197 callable endpoints across 36 platforms**; this node has **11 operations** (10 curated scrapers plus **Custom Scrape**, which reaches every other endpoint by slug).
 <!-- catalog:end -->
 
 - **One page per item** — each call outputs the page object (the results
