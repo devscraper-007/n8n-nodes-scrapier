@@ -161,31 +161,89 @@ function makeCtx(params, response, { continueOnFail = false } = {}) {
 	await assert.rejects(node.execute.call(ctx), /Endpoint Slug is empty/);
 	assert.strictEqual(ctx.calls.length, 0, 'no request without a slug');
 
-	// Catalog dropdown: fails soft when the catalog is unreachable...
-	const getOptions = node.methods.loadOptions.getCatalogEndpoints;
-	let opts = await getOptions.call({ helpers: { httpRequest: async () => { throw new Error('network'); } } });
-	assert.strictEqual(opts.length, 1, 'only the type-it-yourself hint when the catalog is down');
-	assert.strictEqual(opts[0].value, '');
-	// ...lists enabled endpoints from the public catalog (no API key), and caches.
-	const catalogBody = { endpoints: [
-		{ platform: 'zillow', apis: [
-			{ endpoint: '/zillow-search/', name: 'Zillow Search', cost_credit: 2 },
-			{ endpoint: '/zillow-old/', name: 'Old', cost_credit: 1, disabled: true },
-		] },
-		{ platform: 'airbnb', apis: [{ endpoint: '/airbnb-listings/', name: 'Airbnb Listing Search', cost_credit: 1 }] },
-	] };
-	let optCalls = 0;
-	opts = await getOptions.call({ helpers: { httpRequest: async (o) => {
-		optCalls++;
-		assert.strictEqual(o.url, 'https://proxy.scrapier.io/api/v2/endpoints');
-		assert.ok(!o.headers, 'public catalog needs no key');
-		return catalogBody;
-	} } });
-	assert.deepStrictEqual(opts.map((o) => o.value), ['', 'airbnb-listings', 'zillow-search']);
-	assert.ok(/2 credits per successful call/.test(opts[2].description));
-	opts = await getOptions.call({ helpers: { httpRequest: async () => { optCalls++; throw new Error('network'); } } });
-	assert.strictEqual(optCalls, 1, 'second open is served from the cache');
-	assert.strictEqual(opts.length, 3, 'cached list survives a later outage');
+	// Slugs are validated before any request: no path traversal, query/fragment or odd characters.
+	for (const bad of ['../me', 'a/b', 'a..b', 'zillow-search?x=1', 'zillow#frag', 'zillow search', 'Zillow-Search', 'zillow.search', '..', 'a%2Fb']) {
+		for (const field of ['customEndpoint', 'customEndpointPicker']) {
+			ctx = makeCtx(
+				{ operation: 'custom_scrape', customEndpoint: '', customEndpointPicker: '', customParams: '{}', [field]: bad },
+				{ statusCode: 200, headers: {}, body: { success: true, data: {} } },
+			);
+			await assert.rejects(node.execute.call(ctx), /Invalid endpoint slug/, `${field}=${JSON.stringify(bad)} is rejected`);
+			assert.strictEqual(ctx.calls.length, 0, `no request for ${JSON.stringify(bad)}`);
+		}
+	}
+	ctx = makeCtx(
+		{ operation: 'custom_scrape', customEndpoint: ' /zillow_search-2/ ', customEndpointPicker: '', customParams: '{}' },
+		{ statusCode: 200, headers: {}, body: { success: true, data: {} } },
+	);
+	await node.execute.call(ctx);
+	assert.strictEqual(ctx.calls[0].url, 'https://proxy.scrapier.io/api/v2/zillow_search-2/', 'surrounding slashes/space are tolerated');
+
+	// Catalog dropdown. Time is stubbed to exercise the cache, the negative cache and the stale fallback.
+	const realNow = Date.now;
+	let clock = realNow();
+	Date.now = () => clock;
+	try {
+		const getOptions = node.methods.loadOptions.getCatalogEndpoints;
+		const down = (counter) => ({ helpers: { httpRequest: async () => { counter.n++; throw new Error('network'); } } });
+		const catalogBody = { endpoints: [
+			{ platform: 'zillow', apis: [
+				{ endpoint: '/zillow-search/', name: 'Zillow Search', cost_credit: 2 },
+				{ endpoint: '/zillow-old/', name: 'Old', cost_credit: 1, disabled: true },
+				{ endpoint: '/../evil/', name: 'Evil', cost_credit: 1 },
+			] },
+			{ platform: 'airbnb', apis: [{ endpoint: '/airbnb-listings/', name: 'Airbnb Listing Search', cost_credit: 1 }] },
+		] };
+		const up = (counter, seen) => ({ helpers: { httpRequest: async (o) => {
+			counter.n++;
+			if (seen) seen.push(o);
+			assert.strictEqual(o.url, 'https://proxy.scrapier.io/api/v2/endpoints');
+			assert.ok(!o.headers, 'public catalog needs no key');
+			return catalogBody;
+		} } });
+
+		// Fails soft when the catalog is unreachable (nothing cached yet)...
+		const c1 = { n: 0 };
+		let opts = await getOptions.call(down(c1));
+		assert.strictEqual(opts.length, 1, 'only the type-it-yourself hint when the catalog is down');
+		assert.strictEqual(opts[0].value, '');
+		// ...and does not retry for ~60 s (negative cache).
+		clock += 30 * 1000;
+		opts = await getOptions.call(down(c1));
+		assert.strictEqual(c1.n, 1, 'no refetch within the retry-after-failure window');
+		assert.strictEqual(opts.length, 1);
+		// After the window it tries again; the timeout is short.
+		clock += 31 * 1000;
+		const c2 = { n: 0 }, seen = [];
+		opts = await getOptions.call(up(c2, seen));
+		assert.strictEqual(c2.n, 1, 'retried after the window');
+		assert.ok(seen[0].timeout <= 5000, `fetch timeout is short, got ${seen[0].timeout}`);
+		// Lists enabled, well-formed endpoints (disabled and unsafe slugs are dropped).
+		assert.deepStrictEqual(opts.map((o) => o.value), ['', 'airbnb-listings', 'zillow-search']);
+		assert.ok(/2 credits per successful call/.test(opts[2].description));
+		// Served from cache while fresh.
+		clock += 5 * 60 * 1000;
+		opts = await getOptions.call(down(c2));
+		assert.strictEqual(c2.n, 1, 'second open is served from the cache');
+		assert.strictEqual(opts.length, 3);
+		// Once stale, a failed refetch serves the stale list instead of nothing...
+		clock += 6 * 60 * 1000;
+		opts = await getOptions.call(down(c2));
+		assert.strictEqual(c2.n, 2, 'stale cache triggers one refetch');
+		assert.deepStrictEqual(opts.map((o) => o.value), ['', 'airbnb-listings', 'zillow-search'], 'stale list served on failure');
+		// ...and that failure is negatively cached too.
+		clock += 10 * 1000;
+		opts = await getOptions.call(down(c2));
+		assert.strictEqual(c2.n, 2, 'no refetch right after a failure');
+		assert.strictEqual(opts.length, 3);
+		// Recovery after the window refreshes the cache.
+		clock += 61 * 1000;
+		opts = await getOptions.call(up(c2));
+		assert.strictEqual(c2.n, 3);
+		assert.strictEqual(opts.length, 3);
+	} finally {
+		Date.now = realNow;
+	}
 
 	// Default parameters: a number field whose catalog default is null must be
 	// unset ('' in the UI) and must NOT be sent. Otherwise e.g. Amazon Product

@@ -18,6 +18,26 @@ import catalog from './catalog.json';
 const BASE_URL = 'https://proxy.scrapier.io/api/v2';
 const CATALOG_URL = `${BASE_URL}/endpoints`;
 const CATALOG_TTL_MS = 10 * 60 * 1000;
+// After a failed fetch, do not retry for a minute (each open of the dropdown would
+// otherwise wait out the timeout again); the last good list is served meanwhile.
+const CATALOG_RETRY_AFTER_FAILURE_MS = 60 * 1000;
+const CATALOG_TIMEOUT_MS = 5000;
+// Endpoint slugs are lowercase words joined by - or _. Anything else (path
+// separators, query/fragment characters, '..', whitespace) must never be
+// interpolated into the request URL.
+const SLUG_PATTERN = /^[a-z0-9_-]+$/;
+
+/** Normalise and validate a typed or picked slug; throws a message safe to show. */
+function normaliseSlug(input: string): string {
+	const slug = input.trim().replace(/^\/+|\/+$/g, '');
+	if (!slug) return '';
+	if (!SLUG_PATTERN.test(slug)) {
+		throw new Error(
+			`Invalid endpoint slug "${slug.slice(0, 60)}": use only lowercase letters, digits, "-" and "_" (no "/", "..", "?", "#" or spaces), e.g. zillow-search. The slug list is at https://proxy.scrapier.io/api/v2/endpoints`,
+		);
+	}
+	return slug;
+}
 
 interface CatalogField {
 	name: string;
@@ -89,6 +109,7 @@ interface CatalogEndpoint {
 	disabled?: boolean;
 }
 let catalogCache: { at: number; options: INodePropertyOptions[] } | undefined;
+let catalogFailedAt: number | undefined;
 
 function catalogToOptions(payload: unknown): INodePropertyOptions[] {
 	const options: INodePropertyOptions[] = [];
@@ -97,7 +118,7 @@ function catalogToOptions(payload: unknown): INodePropertyOptions[] {
 	for (const platform of platforms as Array<{ platform?: string; apis?: CatalogEndpoint[] }>) {
 		for (const api of platform?.apis ?? []) {
 			const slug = String(api?.endpoint ?? '').replace(/^\/+|\/+$/g, '');
-			if (!slug || api.disabled) continue;
+			if (!slug || api.disabled || !SLUG_PATTERN.test(slug)) continue;
 			const credits = typeof api.cost_credit === 'number' ? api.cost_credit : undefined;
 			options.push({
 				name: `${platform.platform ?? ''}: ${api.name || slug}`,
@@ -180,23 +201,37 @@ export class Scrapier implements INodeType {
 					name: '- Type the slug in Endpoint Slug -',
 					value: '',
 				};
-				if (catalogCache && Date.now() - catalogCache.at < CATALOG_TTL_MS) {
+				const now = Date.now();
+				if (catalogCache && now - catalogCache.at < CATALOG_TTL_MS) {
 					return [empty, ...catalogCache.options];
+				}
+				// On a failure, prefer the last good (stale) list over nothing.
+				const fallback = (): INodePropertyOptions[] =>
+					catalogCache
+						? [empty, ...catalogCache.options]
+						: [{ ...empty, name: '- Catalog unavailable: type the slug in Endpoint Slug -' }];
+				if (catalogFailedAt !== undefined && now - catalogFailedAt < CATALOG_RETRY_AFTER_FAILURE_MS) {
+					return fallback();
 				}
 				try {
 					const payload = await this.helpers.httpRequest({
 						method: 'GET',
 						url: CATALOG_URL,
 						json: true,
-						timeout: 15000,
+						timeout: CATALOG_TIMEOUT_MS,
 					});
 					const options = catalogToOptions(payload);
-					if (options.length === 0) return [empty];
+					if (options.length === 0) {
+						catalogFailedAt = Date.now();
+						return fallback();
+					}
 					catalogCache = { at: Date.now(), options };
+					catalogFailedAt = undefined;
 					return [empty, ...options];
 				} catch {
 					// Fail soft: the dropdown is a convenience, free text always works.
-					return [{ ...empty, name: '- Catalog unavailable: type the slug in Endpoint Slug -' }];
+					catalogFailedAt = Date.now();
+					return fallback();
 				}
 			},
 		},
@@ -216,7 +251,11 @@ export class Scrapier implements INodeType {
 				if (operation === 'custom_scrape') {
 					const typed = String(this.getNodeParameter('customEndpoint', i, '') ?? '');
 					const picked = String(this.getNodeParameter('customEndpointPicker', i, '') ?? '');
-					slug = (typed.trim() || picked.trim()).replace(/^\/+|\/+$/g, '');
+					try {
+						slug = normaliseSlug(typed) || normaliseSlug(picked);
+					} catch (e) {
+						throw new NodeOperationError(this.getNode(), (e as Error).message, { itemIndex: i });
+					}
 					if (!slug) {
 						throw new NodeOperationError(
 							this.getNode(),
