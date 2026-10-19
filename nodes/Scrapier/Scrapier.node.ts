@@ -6,6 +6,7 @@ import type {
 	INodePropertyOptions,
 	INodeType,
 	INodeTypeDescription,
+	ILoadOptionsFunctions,
 	IN8nHttpFullResponse,
 	JsonObject,
 	NodeConnectionType,
@@ -15,6 +16,8 @@ import { NodeApiError, NodeOperationError } from 'n8n-workflow';
 import catalog from './catalog.json';
 
 const BASE_URL = 'https://proxy.scrapier.io/api/v2';
+const CATALOG_URL = `${BASE_URL}/endpoints`;
+const CATALOG_TTL_MS = 10 * 60 * 1000;
 
 interface CatalogField {
 	name: string;
@@ -45,7 +48,8 @@ const operationOptions: INodePropertyOptions[] = [
 	{
 		name: 'Custom Scrape (Any Endpoint)',
 		value: 'custom_scrape',
-		description: 'Call any Scrapier endpoint by its slug',
+		description:
+			'Call any current or future Scrapier endpoint by its slug (catalog: GET /api/v2/endpoints)',
 		action: 'Custom scrape any endpoint',
 	},
 ];
@@ -73,16 +77,58 @@ const fieldProperties: INodeProperties[] = operations.flatMap((op) =>
 	}),
 );
 
+// The public catalog is the source of truth for which endpoints exist. Fetched
+// lazily for the "Pick From Catalog" dropdown, cached briefly, and never
+// required: if it cannot be loaded the user just types the slug.
+interface CatalogEndpoint {
+	endpoint?: string;
+	name?: string;
+	cost_credit?: number;
+	disabled?: boolean;
+}
+let catalogCache: { at: number; options: INodePropertyOptions[] } | undefined;
+
+function catalogToOptions(payload: unknown): INodePropertyOptions[] {
+	const options: INodePropertyOptions[] = [];
+	const platforms = (payload as { endpoints?: unknown })?.endpoints;
+	if (!Array.isArray(platforms)) return options;
+	for (const platform of platforms as Array<{ platform?: string; apis?: CatalogEndpoint[] }>) {
+		for (const api of platform?.apis ?? []) {
+			const slug = String(api?.endpoint ?? '').replace(/^\/+|\/+$/g, '');
+			if (!slug || api.disabled) continue;
+			const credits = typeof api.cost_credit === 'number' ? api.cost_credit : undefined;
+			options.push({
+				name: `${platform.platform ?? ''}: ${api.name || slug}`,
+				value: slug,
+				description:
+					credits === undefined
+						? slug
+						: `${slug} (${credits} credit${credits === 1 ? '' : 's'} per successful call)`,
+			});
+		}
+	}
+	return options.sort((a, b) => a.name.localeCompare(b.name));
+}
+
 const customProperties: INodeProperties[] = [
+	{
+		displayName: 'Pick From Catalog',
+		name: 'customEndpointPicker',
+		type: 'options',
+		typeOptions: { loadOptionsMethod: 'getCatalogEndpoints' },
+		default: '',
+		description:
+			'Every current endpoint, loaded live from the public catalog (GET https://proxy.scrapier.io/api/v2/endpoints). Used when Endpoint Slug below is empty. If the list does not load, type the slug instead.',
+		displayOptions: { show: { operation: ['custom_scrape'] } },
+	},
 	{
 		displayName: 'Endpoint Slug',
 		name: 'customEndpoint',
 		type: 'string',
 		default: '',
-		required: true,
 		placeholder: 'e.g. zillow-search',
 		description:
-			'Any endpoint from the catalog at https://proxy.scrapier.io/api/v2/endpoints',
+			'Any endpoint slug, including endpoints added after this node was released. The full list with prices and parameters is at https://proxy.scrapier.io/api/v2/endpoints. Overrides Pick From Catalog when set.',
 		displayOptions: { show: { operation: ['custom_scrape'] } },
 	},
 	{
@@ -92,7 +138,7 @@ const customProperties: INodeProperties[] = [
 		default: '{}',
 		required: true,
 		description:
-			"The endpoint's input parameters as a JSON object. To fetch the next page, include \"cursor\" set to the previous response's next_cursor.",
+			"The endpoint's input parameters as a JSON object (see the endpoint's input schema in the catalog). To fetch the next page, include \"cursor\" set to the previous response's next_cursor.",
 		displayOptions: { show: { operation: ['custom_scrape'] } },
 	},
 ];
@@ -106,7 +152,7 @@ export class Scrapier implements INodeType {
 		version: 1,
 		subtitle: '={{$parameter["operation"]}}',
 		description:
-			'Scrape Google, Amazon, Instagram, TikTok, LinkedIn and 20+ more platforms as structured data',
+			'Scrape Google, Amazon, Instagram, TikTok, LinkedIn and many more platforms as structured data',
 		defaults: { name: 'Scrapier' },
 		inputs: ['main' as NodeConnectionType],
 		outputs: ['main' as NodeConnectionType],
@@ -125,6 +171,35 @@ export class Scrapier implements INodeType {
 		],
 	};
 
+	methods = {
+		loadOptions: {
+			async getCatalogEndpoints(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				const empty: INodePropertyOptions = {
+					name: '- Type the slug in Endpoint Slug -',
+					value: '',
+				};
+				if (catalogCache && Date.now() - catalogCache.at < CATALOG_TTL_MS) {
+					return [empty, ...catalogCache.options];
+				}
+				try {
+					const payload = await this.helpers.httpRequest({
+						method: 'GET',
+						url: CATALOG_URL,
+						json: true,
+						timeout: 15000,
+					});
+					const options = catalogToOptions(payload);
+					if (options.length === 0) return [empty];
+					catalogCache = { at: Date.now(), options };
+					return [empty, ...options];
+				} catch {
+					// Fail soft: the dropdown is a convenience, free text always works.
+					return [{ ...empty, name: '- Catalog unavailable: type the slug in Endpoint Slug -' }];
+				}
+			},
+		},
+	};
+
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const items = this.getInputData();
 		const returnData: INodeExecutionData[] = [];
@@ -137,9 +212,16 @@ export class Scrapier implements INodeType {
 				const body: IDataObject = {};
 
 				if (operation === 'custom_scrape') {
-					slug = String(this.getNodeParameter('customEndpoint', i))
-						.trim()
-						.replace(/^\/+|\/+$/g, '');
+					const typed = String(this.getNodeParameter('customEndpoint', i, '') ?? '');
+					const picked = String(this.getNodeParameter('customEndpointPicker', i, '') ?? '');
+					slug = (typed.trim() || picked.trim()).replace(/^\/+|\/+$/g, '');
+					if (!slug) {
+						throw new NodeOperationError(
+							this.getNode(),
+							'Endpoint Slug is empty. Type a slug (e.g. zillow-search) or pick one from the catalog: https://proxy.scrapier.io/api/v2/endpoints',
+							{ itemIndex: i },
+						);
+					}
 					const raw = this.getNodeParameter('customParams', i);
 					const params = typeof raw === 'string' ? JSON.parse(raw || '{}') : raw;
 					if (params && typeof params === 'object') {

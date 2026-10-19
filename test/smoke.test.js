@@ -15,7 +15,14 @@ assert.strictEqual(node.description.credentials[0].name, 'scrapierApi');
 assert.strictEqual(typeof node.execute, 'function');
 
 const opProp = node.description.properties.find((p) => p.name === 'operation');
-assert.ok(opProp.options.length >= 11, `expected 11+ operations, got ${opProp.options.length}`);
+// The operation list is generated: curated operations (catalog.json) plus Custom Scrape.
+const generated = require('../nodes/Scrapier/catalog.json');
+assert.ok(generated.length >= 5, `catalog.json has curated operations, got ${generated.length}`);
+assert.strictEqual(opProp.options.length, generated.length + 1, 'every generated operation plus Custom Scrape');
+for (const op of generated) {
+	assert.ok(opProp.options.some((o) => o.value === op.key), `${op.key} is exposed`);
+}
+assert.ok(!/\d\+ more|\d+ operations/.test(node.description.description), 'no hand-typed counts in the node description');
 assert.ok(opProp.options.some((o) => o.value === 'google_search'));
 assert.ok(opProp.options.some((o) => o.value === 'youtube_search_full'));
 assert.ok(opProp.options.some((o) => o.value === 'custom_scrape'));
@@ -58,15 +65,12 @@ assert.strictEqual(queries.required, true);
 // default (amazon-product, amazon-search and youtube-search-full were once
 // all baked as "1 credit" from a stale snapshot). Structure is always
 // checked; the number itself is cross-checked against the app's endpoint
-// snapshot when this runs inside the scrapier-app repo (or ENDPOINTS_JSON
-// points at one). Prices are not pinned here: a price change must not fail a
+// snapshot when ENDPOINTS_JSON points at a saved copy of the catalog. Prices are not pinned here: a price change must not fail a
 // publish.
 function snapshotCredits() {
 	const fs = require('fs');
-	const path = require('path');
-	const candidates = [process.env.ENDPOINTS_JSON, path.join(__dirname, '..', '..', 'src', 'assets', 'endpoints.json')]
-		.filter(Boolean);
-	const file = candidates.find((p) => fs.existsSync(p));
+	const candidates = [process.env.ENDPOINTS_JSON].filter(Boolean);
+	const file = candidates.find((p) => !/^https?:/.test(p) && fs.existsSync(p));
 	if (!file) return null;
 	const out = {};
 	for (const p of JSON.parse(fs.readFileSync(file, 'utf8')).endpoints) {
@@ -136,6 +140,52 @@ function makeCtx(params, response, { continueOnFail = false } = {}) {
 	assert.strictEqual(ctx.calls[0].url, 'https://proxy.scrapier.io/api/v2/zillow-search/');
 	assert.strictEqual(ctx.calls[0].body.cursor, 'c1');
 	assert.strictEqual(out[0].length, 2);
+
+	// Custom Scrape: the picker is used when the typed slug is empty; typed wins.
+	ctx = makeCtx(
+		{ operation: 'custom_scrape', customEndpoint: '', customEndpointPicker: 'zillow-search', customParams: '{}' },
+		{ statusCode: 200, headers: {}, body: { success: true, data: { ok: true } } },
+	);
+	await node.execute.call(ctx);
+	assert.strictEqual(ctx.calls[0].url, 'https://proxy.scrapier.io/api/v2/zillow-search/');
+	ctx = makeCtx(
+		{ operation: 'custom_scrape', customEndpoint: 'reddit-posts', customEndpointPicker: 'zillow-search', customParams: '{}' },
+		{ statusCode: 200, headers: {}, body: { success: true, data: { ok: true } } },
+	);
+	await node.execute.call(ctx);
+	assert.strictEqual(ctx.calls[0].url, 'https://proxy.scrapier.io/api/v2/reddit-posts/');
+	ctx = makeCtx(
+		{ operation: 'custom_scrape', customEndpoint: '', customEndpointPicker: '', customParams: '{}' },
+		{ statusCode: 200, headers: {}, body: { success: true, data: {} } },
+	);
+	await assert.rejects(node.execute.call(ctx), /Endpoint Slug is empty/);
+	assert.strictEqual(ctx.calls.length, 0, 'no request without a slug');
+
+	// Catalog dropdown: fails soft when the catalog is unreachable...
+	const getOptions = node.methods.loadOptions.getCatalogEndpoints;
+	let opts = await getOptions.call({ helpers: { httpRequest: async () => { throw new Error('network'); } } });
+	assert.strictEqual(opts.length, 1, 'only the type-it-yourself hint when the catalog is down');
+	assert.strictEqual(opts[0].value, '');
+	// ...lists enabled endpoints from the public catalog (no API key), and caches.
+	const catalogBody = { endpoints: [
+		{ platform: 'zillow', apis: [
+			{ endpoint: '/zillow-search/', name: 'Zillow Search', cost_credit: 2 },
+			{ endpoint: '/zillow-old/', name: 'Old', cost_credit: 1, disabled: true },
+		] },
+		{ platform: 'airbnb', apis: [{ endpoint: '/airbnb-listings/', name: 'Airbnb Listing Search', cost_credit: 1 }] },
+	] };
+	let optCalls = 0;
+	opts = await getOptions.call({ helpers: { httpRequest: async (o) => {
+		optCalls++;
+		assert.strictEqual(o.url, 'https://proxy.scrapier.io/api/v2/endpoints');
+		assert.ok(!o.headers, 'public catalog needs no key');
+		return catalogBody;
+	} } });
+	assert.deepStrictEqual(opts.map((o) => o.value), ['', 'airbnb-listings', 'zillow-search']);
+	assert.ok(/2 credits per successful call/.test(opts[2].description));
+	opts = await getOptions.call({ helpers: { httpRequest: async () => { optCalls++; throw new Error('network'); } } });
+	assert.strictEqual(optCalls, 1, 'second open is served from the cache');
+	assert.strictEqual(opts.length, 3, 'cached list survives a later outage');
 
 	// Failure: throws with the API's error message.
 	const failBody = { success: false, error: 'Invalid cursor' };
