@@ -1,29 +1,40 @@
 #!/usr/bin/env python3
-"""Generate nodes/Scrapier/catalog.json from the app's endpoint catalog (the
-API v2 snapshot, src/assets/endpoints.json in the scrapier-app repo) so the
-node's operations, fields and credit costs never drift from the real API.
+"""Generate nodes/Scrapier/catalog.json from the live Scrapier endpoint
+catalog (GET https://proxy.scrapier.io/api/v2/endpoints) so the node's
+operations, fields, names and credit costs never drift from the real API.
 
-Credit costs are read from each endpoint's cost_credit, never hardcoded; an
-endpoint without one stops the run. Endpoints the catalog marks `disabled` are
-not callable. A curated endpoint that is disabled stops the run (dropping an
-operation breaks workflows using it) unless it is named with --allow-drop.
+The live catalog is the single source of truth. CHOSEN below is the curated
+list of endpoints that get a dedicated operation; every other endpoint stays
+reachable through the "Custom Scrape (Any Endpoint)" operation. Names, input
+schemas and prices are read from the catalog, never typed here. A curated
+endpoint that is missing or disabled stops the run (dropping an operation
+breaks workflows using it) unless it is named with --allow-drop.
 
 Usage (from n8n-nodes-scrapier/):
-    python3 scripts/generate-catalog.py [--source PATH/TO/endpoints.json] [--allow-drop SLUG ...]
+    python3 scripts/generate-catalog.py [--source PATH_OR_URL] [--force]
+                                        [--allow-drop SLUG ...] [--summary-file FILE]
 
-The source is, in order: --source, the ENDPOINTS_JSON environment variable, or
-(only when this folder sits inside the scrapier-app repo) that repo's
-src/assets/endpoints.json. Anywhere else there is no default: a stale copy
-would silently bake stale prices into the node, so the run stops instead.
-Refresh the snapshot first with `npm run sync:endpoints` in scrapier-app.
+Source, in order: --source, $ENDPOINTS_JSON (file path or URL), else the live
+catalog (fetched with retries). The payload is validated (>=100 endpoints,
+>=5 platforms) and a catalog >20% smaller than the last committed run
+(scripts/catalog-index.json) is refused unless --force. The run ends with a
+review summary: new endpoints, endpoints without a dedicated operation by
+platform, repriced curated operations and new required parameters.
+Output is deterministic: a run with no upstream change produces no diff.
 """
 import argparse
 import json
 import os
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import catalog_source as cs  # noqa: E402
+
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = os.path.join(HERE, '..', 'nodes', 'Scrapier', 'catalog.json')
+ROOT = os.path.join(HERE, '..')
+OUT = os.path.join(ROOT, 'nodes', 'Scrapier', 'catalog.json')
+INDEX = os.path.join(HERE, 'catalog-index.json')
+README = os.path.join(ROOT, 'README.md')
 
 CHOSEN = [
     'google-search',
@@ -45,68 +56,16 @@ def label(slug):
     return ' '.join(w.capitalize() for w in slug.replace('_', '-').split('-'))
 
 
-def credit_text(slug, api):
-    # v2 bills cost_credit once per successful call, whatever the page holds.
-    cost = api.get('cost_credit')
-    if not isinstance(cost, (int, float)) or isinstance(cost, bool) or cost <= 0:
-        raise SystemExit(f'{slug}: catalog has no usable cost_credit ({cost!r}); refusing to guess a price.')
-    cost = int(cost) if float(cost).is_integer() else cost
-    return f'{cost} credit' if cost == 1 else f'{cost} credits'
-
-
-def resolve_source(cli_value):
-    """--source, then $ENDPOINTS_JSON, then the in-repo file when (and only
-    when) this folder lives inside the scrapier-app repo."""
-    explicit = cli_value or os.environ.get('ENDPOINTS_JSON')
-    if explicit:
-        path = os.path.abspath(explicit)
-        if not os.path.isfile(path):
-            raise SystemExit(f'Endpoint catalog not found: {path}\n(from {"--source" if cli_value else "$ENDPOINTS_JSON"})')
-        return path
-    root = os.path.abspath(os.path.join(HERE, '..', '..'))
-    pkg = os.path.join(root, 'package.json')
-    candidate = os.path.join(root, 'src', 'assets', 'endpoints.json')
-    try:
-        with open(pkg) as f:
-            in_monorepo = json.load(f).get('name') == 'scrapier-app'
-    except (OSError, ValueError):
-        in_monorepo = False
-    if in_monorepo and os.path.isfile(candidate):
-        return candidate
-    raise SystemExit(
-        'No endpoint catalog given. Pass --source PATH or set ENDPOINTS_JSON to the scrapier-app\n'
-        'repo\'s src/assets/endpoints.json (run `npm run sync:endpoints` there first so it is current).\n'
-        'There is deliberately no default outside the scrapier-app repo.')
-
-
-def build(source, allow_drop=()):
-    with open(source) as f:
-        data = json.load(f)
-
-    by_slug = {}
-    for platform in data['endpoints']:
-        for api in platform['apis']:
-            by_slug[api['endpoint'].strip('/')] = api
-
-    missing = [s for s in CHOSEN if s not in by_slug]
-    if missing:
-        raise SystemExit(f'Endpoints missing from endpoints.json: {missing}')
-
-    disabled = [s for s in CHOSEN if by_slug[s].get('disabled')]
-    blocked = [s for s in disabled if s not in allow_drop]
-    if blocked:
-        raise SystemExit(
-            'BREAKING: these curated endpoints are disabled in the catalog and would be silently\n'
-            f'dropped from the node: {", ".join(blocked)}\n'
-            'Users of those operations would break on the next publish. Re-enable them upstream, remove\n'
-            'them from CHOSEN on purpose, or re-run with '
-            + ' '.join(f'--allow-drop {s}' for s in blocked) + ' to accept the removal.')
-    for s in disabled:
-        print(f'WARNING: {s} is disabled in the catalog; dropped from the node (--allow-drop).', file=sys.stderr)
+def build(source, force=False, allow_drop=(), summary_file=None):
+    data, origin = cs.load_catalog(source)
+    by_slug = cs.index_catalog(data)
+    prev = cs.read_index(INDEX)
+    cs.check_shrink(by_slug, prev, force)
+    active = cs.select_curated(by_slug, CHOSEN, set(allow_drop))
 
     operations = []
-    for slug in (s for s in CHOSEN if s not in disabled):
-        api = by_slug[slug]
+    for slug in active:
+        api = by_slug[slug][1]
         fields = []
         for pname, meta in (api.get('input') or {}).items():
             if not isinstance(meta, dict):
@@ -128,26 +87,36 @@ def build(source, allow_drop=()):
                 'description': meta.get('description', ''),
                 'default': default,
             })
+        name = api.get('name') or label(slug)
         operations.append({
             'key': slug.replace('-', '_'),
             'slug': slug,
-            'label': label(slug),
-            'description': f'{label(slug)} ({credit_text(slug, api)} per successful call)',
+            'label': name,
+            # v2 bills cost_credit once per successful call, whatever the page holds.
+            'description': f'{name} ({cs.credit_text(cs.cost_of(slug, api))} per successful call)',
             'fields': fields,
         })
 
-    os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, 'w') as f:
         json.dump(operations, f, indent=2)
         f.write('\n')
-    print(f'Wrote {len(operations)} operations to {OUT} (from {source})')
+    print(f'Wrote {len(operations)} operations to {OUT} (from {origin})')
+
+    st = cs.stats(by_slug)
+    cs.update_marked_block(README, (
+        f'The live catalog currently has **{st["endpoints"]} endpoints across {st["platforms"]} platforms**; '
+        f'this node has **{len(operations) + 1} operations** ({len(operations)} curated scrapers plus '
+        '**Custom Scrape**, which reaches every other endpoint by slug).'))
+    cs.update_marked_block(README, (
+        f'Each successful call costs the endpoint\'s credit price ({cs.price_range_text(st)} across the '
+        'catalog), however many results the page holds, empty pages included. Each curated operation\'s '
+        'description shows its price; for Custom Scrape see the endpoint\'s `cost_credit` in the catalog. '
+        'Failed calls are free.'), name='pricing')
+    cs.finish(INDEX, by_slug, active, origin, prev, summary_file)
 
 
 if __name__ == '__main__':
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
-    ap.add_argument('--source', help='path to the scrapier-app endpoints.json (or set ENDPOINTS_JSON)')
-    ap.add_argument('--allow-drop', action='append', default=[], metavar='SLUG',
-                    help='accept removing this curated endpoint because the catalog marks it disabled '
-                         '(without it the run stops: dropping an operation breaks workflows that use it)')
+    cs.add_common_args(ap)
     args = ap.parse_args()
-    build(resolve_source(args.source), set(args.allow_drop))
+    build(args.source, args.force, args.allow_drop, args.summary_file)
