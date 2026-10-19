@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- Custom Scrape: new optional **Pick From Catalog** dropdown, loaded live from the
+  public catalog (`GET /api/v2/endpoints`, cached 10 minutes, falls back to typing
+  the slug). **Endpoint Slug** keeps its name and takes precedence when set; it is
+  no longer marked required in the UI (an empty slug with no pick fails with a clear
+  message). Operation keys and field names are unchanged.
+- Operation labels now come from the catalog's `name` field (e.g. "YouTube Search",
+  "Amazon Product Scraper"); operation values and slugs are unchanged.
+- Node description and README no longer hand-type platform or operation counts.
+- The catalog generator reads the live catalog by default and validates it; a weekly
+  workflow opens a pull request when the catalog changes (it never publishes).
+
 ## 1.2.0
 
 > **Read this before upgrading: Google Search fails silently.** The API
