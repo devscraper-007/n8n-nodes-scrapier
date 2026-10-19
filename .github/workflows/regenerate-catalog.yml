@@ -31,12 +31,24 @@ jobs:
       contents: write        # push the automation branch
       pull-requests: write   # open / update the PR
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 20
-      - name: Regenerate from the live catalog
-        run: python3 scripts/generate-catalog.py --summary-file "$RUNNER_TEMP/catalog-review.md"
+      - name: Check the shared generator helper
+        run: |
+          python3 scripts/catalog_source.py --self-test
+          python3 -m py_compile scripts/catalog_source.py scripts/generate-catalog.py
+      # Fetch once and keep the copy: the generator and the test step both read it,
+      # so the credit cross-check in `npm test` compares against the same catalog.
+      - name: Fetch the live catalog
+        run: |
+          curl --fail --silent --show-error --location \
+            --retry 4 --retry-all-errors --retry-delay 5 --max-time 60 \
+            -H 'User-Agent: scrapier-connector-generator/1 (+https://app.scrapier.io)' \
+            -o "$RUNNER_TEMP/endpoints.json" https://proxy.scrapier.io/api/v2/endpoints
+      - name: Regenerate from the fetched catalog
+        run: python3 scripts/generate-catalog.py --source "$RUNNER_TEMP/endpoints.json" --summary-file "$RUNNER_TEMP/catalog-review.md"
       - name: Show the review summary
         if: always()
         run: |
@@ -44,7 +56,10 @@ jobs:
       # --ignore-scripts skips native builds of transitive dev deps (see publish.yml).
       - run: npm ci --ignore-scripts
       - run: npm run build
-      - run: npm test
+      - name: Test (with the credit cross-check against the fetched catalog)
+        run: npm test
+        env:
+          ENDPOINTS_JSON: ${{ runner.temp }}/endpoints.json
       - name: Open a pull request if the output changed
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
