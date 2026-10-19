@@ -1,8 +1,9 @@
 # n8n-nodes-scrapier
 
 n8n community node for the [Scrapier](https://app.scrapier.io) web scraping
-API — Google, Amazon, Instagram, TikTok, LinkedIn and 20+ more platforms as
-structured data.
+API — Google, Amazon, Instagram, TikTok, LinkedIn and many more platforms as
+structured data. The node always reaches the full live endpoint catalog: new
+endpoints are callable the day they ship, with no node update.
 
 ## Features
 
@@ -11,9 +12,18 @@ structured data.
   to poll.
 - **Scrapier credential type** — API key sent as `X-API-Key`, validated
   against `GET /api/v2/me` (shows your account email on the credential).
-- **11 operations** — 10 curated scrapers plus **Custom Scrape**, which calls
-  any endpoint in the [v2 catalog](https://proxy.scrapier.io/api/v2/endpoints)
-  by slug with a JSON parameter object.
+- **Curated operations plus Custom Scrape** — dedicated operations for the
+  most-used scrapers, and **Custom Scrape (Any Endpoint)**, which calls every
+  current and future endpoint in the
+  [v2 catalog](https://proxy.scrapier.io/api/v2/endpoints)
+  (`GET /api/v2/endpoints`) by slug with a JSON parameter object. Pick the
+  slug from the *Pick From Catalog* dropdown (loaded live from the public
+  catalog) or type it.
+
+<!-- catalog:start -->
+The live catalog currently has **197 endpoints across 36 platforms**; this node has **11 operations** (10 curated scrapers plus **Custom Scrape**, which reaches every other endpoint by slug).
+<!-- catalog:end -->
+
 - **One page per item** — each call outputs the page object (the results
   under an endpoint-specific key such as `results`, `products` or `posts`,
   plus `next_cursor`) as a single n8n item. If the API returns an array, you
@@ -31,10 +41,9 @@ structured data.
 
 ## Pricing
 
-Each successful call costs the endpoint's credit price, however many
-results the page holds, empty pages included. Curated operations cost 1 to
-5 credits each (each operation's description lists it); Custom Scrape bills
-the chosen endpoint's own price (up to 100). Failed calls are free.
+<!-- pricing:start -->
+Each successful call costs the endpoint's credit price (from 1 credit (up to 100) per successful call across the catalog), however many results the page holds, empty pages included. Each curated operation's description shows its price; for Custom Scrape see the endpoint's `cost_credit` in the catalog. Failed calls are free.
+<!-- pricing:end -->
 
 ## Upgrading to 1.2.0
 
@@ -77,12 +86,22 @@ python3 scripts/generate-catalog.py   # refresh nodes/Scrapier/catalog.json
 npm run build
 ```
 
-Inside the scrapier-app repo the generator reads `../src/assets/endpoints.json`
-(refresh it with `npm run sync:endpoints` at the repo root first). Elsewhere pass
-`--source /path/to/endpoints.json` or set `ENDPOINTS_JSON`; there is no default.
-Credit costs are read from each endpoint's `cost_credit`. A curated endpoint
-the catalog marks `disabled` stops the run (dropping an operation breaks
-workflows using it) unless you pass `--allow-drop <slug>`.
+The generator reads the **live** catalog (`GET https://proxy.scrapier.io/api/v2/endpoints`)
+by default, with retries. Pass `--source PATH_OR_URL` or set `ENDPOINTS_JSON`
+to use a saved copy instead. Names, input schemas and credit costs are read
+from the catalog (`name`, `input`, `cost_credit`); only the list of curated
+slugs (`CHOSEN` in the script) is maintained by hand. It refuses a catalog
+with fewer than 100 endpoints or 5 platforms, or one more than 20% smaller
+than the last run (`--force` overrides), and a curated endpoint that is
+missing or `disabled` stops the run (dropping an operation breaks workflows
+using it) unless you pass `--allow-drop <slug>`. Each run prints a review
+summary (new endpoints, endpoints without a dedicated operation by platform,
+repriced curated operations, new required parameters); `--summary-file FILE`
+also saves it as Markdown.
+
+`.github/workflows/regenerate-catalog.yml` runs this weekly and opens a pull
+request only when the output changed. It never publishes or tags; releasing
+(version bump, tag) stays a manual step.
 
 ## Install (users)
 
