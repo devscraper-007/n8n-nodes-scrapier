@@ -108,8 +108,8 @@ def build(source, force=False, allow_drop=(), summary_file=None):
         f'this node has **{len(operations) + 1} operations** ({len(operations)} curated scrapers plus '
         '**Custom Scrape**, which reaches every other endpoint by slug).'))
     cs.update_marked_block(README, (
-        f'Each successful call costs the endpoint\'s credit price ({cs.price_range_text(st)} across the '
-        'catalog), however many results the page holds, empty pages included. Each curated operation\'s '
+        f'Each successful call costs the endpoint\'s credit price ({cs.price_range_text(st)}), '
+        'however many results the page holds, empty pages included. Each curated operation\'s '
         'description shows its price; for Custom Scrape see the endpoint\'s `cost_credit` in the catalog. '
         'Failed calls are free.'), name='pricing')
     cs.finish(INDEX, by_slug, active, origin, prev, summary_file)

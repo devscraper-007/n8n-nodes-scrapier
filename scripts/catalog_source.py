@@ -17,7 +17,10 @@ through the connector's "call any endpoint by slug" operation. This module:
 
 NOTE: this file is duplicated verbatim in three places (n8n-nodes-scrapier/
 scripts, scrapier-app/zapier-app/scripts, scrapier-app/make-app/scripts).
-Change all copies together; CI in scrapier-app checks the two there match.
+Change all copies together; CI in scrapier-app checks the two there match, and
+`npm test` in n8n-nodes-scrapier prints this file's sha256 for a manual compare
+(`python3 scripts/catalog_source.py --sha256`).
+`python3 scripts/catalog_source.py --self-test` runs the built-in checks.
 Python 3.8+, standard library only.
 """
 import argparse
@@ -35,6 +38,7 @@ MIN_ENDPOINTS = 100
 MIN_PLATFORMS = 5
 MAX_SHRINK = 0.20
 USER_AGENT = 'scrapier-connector-generator/1 (+https://app.scrapier.io)'
+EXPECTED_CATALOG_SOURCE = 'upstream'
 
 
 def die(message):
@@ -94,10 +98,30 @@ def load_catalog(source=None):
         die(f'{path} is not valid JSON: {e}')
 
 
+def check_catalog_meta(data):
+    """The live payload carries a `catalog` object ({source, routes, platforms,
+    fetched_at, unroutable}). Refuse a catalog the API itself flags as degraded:
+    routes that cannot be served, or a source other than the upstream catalog
+    (e.g. a fallback snapshot). Lenient when the object or a field is absent
+    (saved copies and older payloads)."""
+    meta = data.get('catalog')
+    if not isinstance(meta, dict):
+        return
+    unroutable = meta.get('unroutable')
+    if isinstance(unroutable, (int, float)) and not isinstance(unroutable, bool) and unroutable > 0:
+        die(f'the catalog reports {unroutable} unroutable endpoint(s) (catalog.unroutable); '
+            'upstream is degraded, refusing to generate from it.')
+    source = meta.get('source')
+    if source is not None and source != EXPECTED_CATALOG_SOURCE:
+        die(f'the catalog reports catalog.source={source!r}, expected {EXPECTED_CATALOG_SOURCE!r}; '
+            'it may be a fallback or stale snapshot, refusing to generate from it.')
+
+
 def index_catalog(data):
     """Validate the payload and return {slug: (platform, api)} in catalog order."""
     if not isinstance(data, dict) or not isinstance(data.get('endpoints'), list):
         die('catalog payload has no "endpoints" list; refusing to continue')
+    check_catalog_meta(data)
     by_slug = {}
     platforms = set()
     for platform in data['endpoints']:
@@ -118,19 +142,41 @@ def index_catalog(data):
 
 
 def read_index(path):
+    """Load the committed run index. Absent -> None (first run; the shrink guard
+    is skipped, with a warning). Present but unreadable or malformed -> fail:
+    silently skipping the guard would defeat it."""
+    if not os.path.exists(path):
+        print(f'WARNING: no previous run index at {path}; this looks like a first run, so the '
+              'shrink guard and the "changes since last run" review are skipped.', file=sys.stderr)
+        return None
     try:
         with open(path) as f:
-            return json.load(f)
-    except (OSError, ValueError):
-        return None
+            prev = json.load(f)
+    except (OSError, ValueError) as e:
+        die(f'the previous run index {path} exists but cannot be read ({e}); fix or delete it on purpose '
+            '(deleting skips the shrink guard once).')
+    if (not isinstance(prev, dict) or not isinstance(prev.get('endpoints'), dict)
+            or not isinstance(prev.get('curated'), dict)
+            or not isinstance(prev.get('disabled', []), list)):
+        die(f'the previous run index {path} is malformed (expected "endpoints", "curated" objects); '
+            'fix or delete it on purpose (deleting skips the shrink guard once).')
+    return prev
+
+
+def enabled_slugs(by_slug):
+    return {s for s, (_, a) in by_slug.items() if not is_disabled(a)}
 
 
 def check_shrink(by_slug, prev, force):
-    if not prev or not prev.get('endpoints'):
+    """Compare ENABLED endpoint counts: disabled ones are not callable, so they
+    do not count as present on either side."""
+    if not prev:
         return
-    before, now = len(prev['endpoints']), len(by_slug)
+    disabled_before = set(prev.get('disabled') or [])
+    before = len([s for s in prev['endpoints'] if s not in disabled_before])
+    now = len(enabled_slugs(by_slug))
     if before and now < before * (1 - MAX_SHRINK):
-        msg = (f'the catalog shrank from {before} to {now} endpoints (more than {int(MAX_SHRINK * 100)}% '
+        msg = (f'the catalog shrank from {before} to {now} enabled endpoints (more than {int(MAX_SHRINK * 100)}% '
                'smaller than the last committed run)')
         if not force:
             die(msg + '. That usually means an upstream problem, not a real removal. '
@@ -182,10 +228,19 @@ def curated_state(by_slug, active):
     for slug in active:
         api = by_slug[slug][1]
         inputs = api.get('input') or {}
+        fields = {}
+        for k, v in inputs.items():
+            if not isinstance(v, dict):
+                continue
+            f = {'type': v.get('type'), 'default': v.get('default_value')}
+            if isinstance(v.get('options'), list):
+                f['options'] = sorted(v['options'], key=str)
+            fields[k] = f
         state[slug] = {
             'cost_credit': cost_of(slug, api),
             'params': sorted(inputs),
             'required': sorted(k for k, v in inputs.items() if isinstance(v, dict) and v.get('required')),
+            'fields': fields,
         }
     return state
 
@@ -208,10 +263,44 @@ def price_range_text(st):
     lo, hi = st['min_cost_credit'], st['max_cost_credit']
     if lo == hi:
         return f'{credit_text(lo)} per successful call'
-    return f'from {credit_text(lo)} (up to {hi}) per successful call'
+    return f'from {credit_text(lo)} per successful call, up to {hi} for the heaviest endpoints'
 
 
 # ----------------------------------------------------------------- review ---
+
+def _show(value):
+    return json.dumps(value, sort_keys=True)
+
+
+def _field_changes(slug, old, cur):
+    """Per-parameter default / type / enum-option changes between two curated
+    states. Silent default changes alter what existing workflows send, so they
+    are reported even though nothing is added or removed."""
+    out = []
+    old_f, cur_f = old.get('fields'), cur.get('fields') or {}
+    if old_f is None:
+        return out  # previous run predates the field record; baseline noted separately
+    for name in sorted(set(old_f) & set(cur_f)):
+        o, c = old_f[name], cur_f[name]
+        if o.get('type') != c.get('type'):
+            out.append(f'- `{slug}`: param `{name}` TYPE changed {_show(o.get("type"))} -> {_show(c.get("type"))}.')
+        if o.get('default') != c.get('default'):
+            out.append(f'- `{slug}`: param `{name}` DEFAULT changed {_show(o.get("default"))} -> '
+                       f'{_show(c.get("default"))} (existing workflows that leave it unset now send a different value).')
+        oo, co = o.get('options'), c.get('options')
+        if oo != co:
+            added = sorted(set(co or []) - set(oo or []), key=str)
+            gone = sorted(set(oo or []) - set(co or []), key=str)
+            parts = []
+            if added:
+                parts.append('added ' + ', '.join(map(str, added)))
+            if gone:
+                parts.append('removed ' + ', '.join(map(str, gone)))
+            if oo is None or co is None:
+                parts.append('the list of allowed options ' + ('appeared' if oo is None else 'was dropped'))
+            out.append(f'- `{slug}`: param `{name}` OPTIONS changed ({"; ".join(parts)}).')
+    return out
+
 
 def build_review(by_slug, active, state, prev, origin):
     """Return the review summary as a list of Markdown lines."""
@@ -248,8 +337,13 @@ def build_review(by_slug, active, state, prev, origin):
             if removed:
                 problems.append(f'- `{slug}`: REMOVED params {", ".join(removed)} '
                                 '(the API ignores unknown params silently; workflows lose the setting).')
+            problems.extend(_field_changes(slug, old, cur))
         for slug in sorted(set(prev_cur) - set(active)):
             problems.append(f'- `{slug}`: no longer curated (action dropped).')
+        if any('fields' not in prev_cur.get(s, {'fields': 1}) for s in active):
+            out.append('')
+            out.append('Note: the previous run did not record per-parameter defaults, types or options for '
+                       'some curated actions, so changes to those are only visible from this run on.')
         out.append('')
         out.append('Curated actions that changed:' if problems else 'Curated actions: no price or parameter changes.')
         out.extend(problems)
@@ -315,3 +409,90 @@ def update_marked_block(path, text, name='catalog'):
     if new != content:
         with open(path, 'w') as f:
             f.write(new)
+
+
+# -------------------------------------------------------------- self-test ---
+
+def _self_test():
+    import contextlib
+    import hashlib
+    import io
+    import tempfile
+
+    def raises(fn, *a):
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            try:
+                fn(*a)
+            except SystemExit as e:
+                return str(e)
+        return None
+
+    def api(slug, disabled=False, **inputs):
+        return {'endpoint': f'/{slug}/', 'cost_credit': 1, 'disabled': disabled, 'input': inputs}
+
+    # Per-parameter default / type / options changes are reported.
+    old_api = api('a', use_proxy={'type': 'boolean', 'default_value': 'false', 'options': ['true', 'false']},
+                  n={'type': 'integer', 'default_value': '10'}, s={'type': 'string', 'default_value': ''})
+    new_api = api('a', use_proxy={'type': 'boolean', 'default_value': 'true', 'options': ['true', 'false']},
+                  n={'type': 'number', 'default_value': '10'},
+                  s={'type': 'string', 'default_value': '', 'options': ['x', 'y']})
+    mk = lambda a: {'a': ('p', a)}  # noqa: E731
+    old_state = curated_state(mk(old_api), ['a'])
+    new_state = curated_state(mk(new_api), ['a'])
+    lines = '\n'.join(build_review(mk(new_api), ['a'], new_state, {'endpoints': {'a': 'p'}, 'curated': old_state}, 'test'))
+    assert 'param `use_proxy` DEFAULT changed "false" -> "true"' in lines, lines
+    assert 'param `n` TYPE changed "integer" -> "number"' in lines, lines
+    assert 'param `s` OPTIONS changed' in lines, lines
+    same = '\n'.join(build_review(mk(new_api), ['a'], new_state, {'endpoints': {'a': 'p'}, 'curated': new_state}, 'test'))
+    assert 'no price or parameter changes' in same, same
+    legacy = {k: v for k, v in old_state['a'].items() if k != 'fields'}
+    lines = '\n'.join(build_review(mk(new_api), ['a'], new_state, {'endpoints': {'a': 'p'}, 'curated': {'a': legacy}}, 'test'))
+    assert 'did not record per-parameter defaults' in lines, lines
+
+    # read_index: absent -> None; unreadable / malformed -> fail.
+    with tempfile.TemporaryDirectory() as d:
+        path = os.path.join(d, 'idx.json')
+        with contextlib.redirect_stderr(io.StringIO()):
+            assert read_index(path) is None, 'absent index -> None (guard skipped with a warning)'
+        with open(path, 'w') as f:
+            f.write('{not json')
+        assert raises(read_index, path), 'unparseable index must fail'
+        with open(path, 'w') as f:
+            f.write('{"endpoints": []}')
+        assert raises(read_index, path), 'malformed index must fail'
+        with open(path, 'w') as f:
+            f.write('{"endpoints": {"a": "p"}, "curated": {}}')
+        assert read_index(path)['endpoints'] == {'a': 'p'}
+
+    # Shrink guard counts enabled endpoints only.
+    prev = {'endpoints': {f'e{i}': 'p' for i in range(10)}, 'disabled': ['e0', 'e1', 'e2', 'e3', 'e4']}
+    now = {f'e{i}': ('p', {'endpoint': f'e{i}'}) for i in range(5, 10)}
+    for i in range(5):  # still listed but disabled: no longer callable
+        now[f'e{i}'] = ('p', {'endpoint': f'e{i}', 'disabled': True})
+    assert raises(check_shrink, now, prev, False) is None, 'same enabled set must pass'
+    now.pop('e9'); now.pop('e8')
+    assert raises(check_shrink, now, prev, False), 'losing enabled endpoints must fail'
+    assert raises(check_shrink, now, {'endpoints': {f'e{i}': 'p' for i in range(10)}, 'disabled': []}, False), \
+        'disabled endpoints must not count as present'
+
+    # Catalog metadata: degraded markers fail; absent ones are tolerated.
+    assert check_catalog_meta({}) is None
+    assert check_catalog_meta({'catalog': {'source': 'upstream', 'unroutable': 0}}) is None
+    assert raises(check_catalog_meta, {'catalog': {'source': 'upstream', 'unroutable': 2}})
+    assert raises(check_catalog_meta, {'catalog': {'source': 'fallback', 'unroutable': 0}})
+
+    # price text has no nested parentheses
+    assert '(' not in price_range_text({'min_cost_credit': 1, 'max_cost_credit': 100})
+
+    print('catalog_source self-test OK; sha256 ' + hashlib.sha256(open(__file__, 'rb').read()).hexdigest())
+
+
+if __name__ == '__main__':
+    if '--self-test' in sys.argv[1:]:
+        _self_test()
+    elif '--sha256' in sys.argv[1:]:
+        import hashlib
+        print(hashlib.sha256(open(__file__, 'rb').read()).hexdigest())
+    else:
+        die('library module; use --self-test or --sha256')

@@ -42,7 +42,7 @@ The live catalog currently has **197 callable endpoints across 36 platforms**; t
 ## Pricing
 
 <!-- pricing:start -->
-Each successful call costs the endpoint's credit price (from 1 credit (up to 100) per successful call across the catalog), however many results the page holds, empty pages included. Each curated operation's description shows its price; for Custom Scrape see the endpoint's `cost_credit` in the catalog. Failed calls are free.
+Each successful call costs the endpoint's credit price (from 1 credit per successful call, up to 100 for the heaviest endpoints), however many results the page holds, empty pages included. Each curated operation's description shows its price; for Custom Scrape see the endpoint's `cost_credit` in the catalog. Failed calls are free.
 <!-- pricing:end -->
 
 ## Upgrading to 1.2.0

@@ -2,6 +2,153 @@
   "curated": {
     "amazon-product": {
       "cost_credit": 3,
+      "fields": {
+        "cursor": {
+          "default": "",
+          "type": "string"
+        },
+        "department": {
+          "default": "",
+          "type": "string"
+        },
+        "depth": {
+          "default": "100",
+          "type": "integer"
+        },
+        "language_name": {
+          "default": "",
+          "options": [
+            "Arabic (Saudi Arabia)",
+            "Arabic (U.A.E.)",
+            "Chinese (Simplified)",
+            "Chinese (Traditional)",
+            "Czech (Czech Republic)",
+            "Dutch (Netherlands)",
+            "English (Australia)",
+            "English (Canada)",
+            "English (India)",
+            "English (U.A.E.)",
+            "English (United Kingdom)",
+            "English (United States)",
+            "French (Canada)",
+            "French (France)",
+            "German (Germany)",
+            "Hebrew (Israel)",
+            "Hindi (India)",
+            "Italian (Italy)",
+            "Japanese (Japan)",
+            "Korean (Korea)",
+            "Polish (Poland)",
+            "Portuguese (Brazil)",
+            "Spanish (Mexico)",
+            "Spanish (Spain)",
+            "Spanish (United States)",
+            "Swedish (Sweden)",
+            "Turkish (Turkey)"
+          ],
+          "type": "string"
+        },
+        "location_name": {
+          "default": "United States",
+          "options": [
+            "Australia",
+            "Belgium",
+            "Brazil",
+            "Canada",
+            "Egypt",
+            "France",
+            "Germany",
+            "India",
+            "Italy",
+            "Japan",
+            "Mexico",
+            "Netherlands",
+            "Poland",
+            "Saudi Arabia",
+            "Singapore",
+            "Spain",
+            "Sweden",
+            "Turkiye",
+            "United Arab Emirates",
+            "United Kingdom",
+            "United States"
+          ],
+          "type": "string"
+        },
+        "max_crawl_pages": {
+          "default": "7",
+          "type": "integer"
+        },
+        "price_max": {
+          "default": "",
+          "type": "integer"
+        },
+        "price_min": {
+          "default": "",
+          "type": "integer"
+        },
+        "query": {
+          "default": "keyboard",
+          "type": "string"
+        },
+        "raw_data": {
+          "default": "false",
+          "options": [
+            "false",
+            "true"
+          ],
+          "type": "boolean"
+        },
+        "se_domain": {
+          "default": "",
+          "type": "string"
+        },
+        "search_param": {
+          "default": "",
+          "type": "string"
+        },
+        "set_delivery_location": {
+          "default": "true",
+          "options": [
+            "false",
+            "true"
+          ],
+          "type": "boolean"
+        },
+        "sort_by": {
+          "default": "",
+          "options": [
+            "avg_customer_review",
+            "best_sellers",
+            "featured",
+            "newest_arrival",
+            "price_high_to_low",
+            "price_low_to_high",
+            "relevance"
+          ],
+          "type": "string"
+        },
+        "tag": {
+          "default": "",
+          "type": "string"
+        },
+        "url": {
+          "default": "",
+          "type": "string"
+        },
+        "use_proxy": {
+          "default": "true",
+          "options": [
+            "false",
+            "true"
+          ],
+          "type": "boolean"
+        },
+        "zip_code": {
+          "default": "",
+          "type": "string"
+        }
+      },
       "params": [
         "cursor",
         "department",
@@ -26,6 +173,74 @@
     },
     "amazon-search": {
       "cost_credit": 2,
+      "fields": {
+        "browse_node": {
+          "default": "",
+          "type": "integer"
+        },
+        "category": {
+          "default": "",
+          "type": "string"
+        },
+        "cursor": {
+          "default": "",
+          "type": "string"
+        },
+        "domain_code": {
+          "default": "com",
+          "options": [
+            "ca",
+            "co.uk",
+            "com",
+            "de",
+            "es",
+            "fr",
+            "in",
+            "it"
+          ],
+          "type": "string"
+        },
+        "max_pages": {
+          "default": "1",
+          "type": "integer"
+        },
+        "node_hierarchy": {
+          "default": "",
+          "type": "string"
+        },
+        "query": {
+          "default": "Playstation",
+          "type": "string"
+        },
+        "raw_data": {
+          "default": "false",
+          "options": [
+            "false",
+            "true"
+          ],
+          "type": "boolean"
+        },
+        "sort_by": {
+          "default": "relevanceblender",
+          "options": [
+            "date-desc-rank",
+            "exact-aware-popularity-rank",
+            "price-asc-rank",
+            "price-desc-rank",
+            "relevanceblender",
+            "review-rank"
+          ],
+          "type": "string"
+        },
+        "use_proxy": {
+          "default": "true",
+          "options": [
+            "false",
+            "true"
+          ],
+          "type": "boolean"
+        }
+      },
       "params": [
         "browse_node",
         "category",
@@ -44,6 +259,55 @@
     },
     "duckduckgo-search": {
       "cost_credit": 1,
+      "fields": {
+        "cursor": {
+          "default": "",
+          "type": "string"
+        },
+        "query": {
+          "default": "python programming",
+          "type": "string"
+        },
+        "raw_data": {
+          "default": "false",
+          "options": [
+            "false",
+            "true"
+          ],
+          "type": "boolean"
+        },
+        "region": {
+          "default": "wt-wt",
+          "type": "string"
+        },
+        "safe_search": {
+          "default": "OFF",
+          "options": [
+            "MODERATE",
+            "OFF",
+            "STRICT"
+          ],
+          "type": "string"
+        },
+        "search_mode": {
+          "default": "default",
+          "options": [
+            "default",
+            "images",
+            "news",
+            "videos"
+          ],
+          "type": "string"
+        },
+        "use_proxy": {
+          "default": "true",
+          "options": [
+            "false",
+            "true"
+          ],
+          "type": "boolean"
+        }
+      },
       "params": [
         "cursor",
         "query",
@@ -59,6 +323,32 @@
     },
     "facebook-page": {
       "cost_credit": 1,
+      "fields": {
+        "cursor": {
+          "default": "",
+          "type": "string"
+        },
+        "raw_data": {
+          "default": "false",
+          "options": [
+            "false",
+            "true"
+          ],
+          "type": "boolean"
+        },
+        "urls": {
+          "default": "copperkettleyqr",
+          "type": "string"
+        },
+        "use_proxy": {
+          "default": "true",
+          "options": [
+            "false",
+            "true"
+          ],
+          "type": "boolean"
+        }
+      },
       "params": [
         "cursor",
         "raw_data",
@@ -71,6 +361,44 @@
     },
     "google-maps": {
       "cost_credit": 1,
+      "fields": {
+        "country": {
+          "default": "us",
+          "type": "string"
+        },
+        "cursor": {
+          "default": "",
+          "type": "string"
+        },
+        "language": {
+          "default": "en",
+          "type": "string"
+        },
+        "location": {
+          "default": "Houston,Texas",
+          "type": "string"
+        },
+        "queries": {
+          "default": "coffee shops",
+          "type": "string"
+        },
+        "raw_data": {
+          "default": "false",
+          "options": [
+            "false",
+            "true"
+          ],
+          "type": "boolean"
+        },
+        "use_proxy": {
+          "default": "true",
+          "options": [
+            "false",
+            "true"
+          ],
+          "type": "boolean"
+        }
+      },
       "params": [
         "country",
         "cursor",
@@ -86,6 +414,52 @@
     },
     "google-search": {
       "cost_credit": 1,
+      "fields": {
+        "countryCode": {
+          "default": "us",
+          "type": "string"
+        },
+        "dateRange": {
+          "default": "any_time",
+          "options": [
+            "any_time",
+            "custom",
+            "past_2_years",
+            "past_3_weeks",
+            "past_6_months",
+            "past_7_days"
+          ],
+          "type": "string"
+        },
+        "languageCode": {
+          "default": "en",
+          "type": "string"
+        },
+        "page": {
+          "default": "1",
+          "type": "integer"
+        },
+        "queries": {
+          "default": "latest technology news",
+          "type": "string"
+        },
+        "raw_data": {
+          "default": "false",
+          "options": [
+            "false",
+            "true"
+          ],
+          "type": "boolean"
+        },
+        "use_proxy": {
+          "default": "true",
+          "options": [
+            "false",
+            "true"
+          ],
+          "type": "boolean"
+        }
+      },
       "params": [
         "countryCode",
         "dateRange",
@@ -101,6 +475,41 @@
     },
     "instagram-profile-posts": {
       "cost_credit": 1,
+      "fields": {
+        "cursor": {
+          "default": "",
+          "type": "string"
+        },
+        "pinned_mode": {
+          "default": "include",
+          "options": [
+            "include",
+            "only",
+            "skip"
+          ],
+          "type": "string"
+        },
+        "raw_data": {
+          "default": "false",
+          "options": [
+            "false",
+            "true"
+          ],
+          "type": "boolean"
+        },
+        "use_proxy": {
+          "default": "true",
+          "options": [
+            "false",
+            "true"
+          ],
+          "type": "boolean"
+        },
+        "usernames": {
+          "default": "mrbeast",
+          "type": "string"
+        }
+      },
       "params": [
         "cursor",
         "pinned_mode",
@@ -114,6 +523,32 @@
     },
     "linkedin-profile": {
       "cost_credit": 1,
+      "fields": {
+        "cursor": {
+          "default": "",
+          "type": "string"
+        },
+        "raw_data": {
+          "default": "false",
+          "options": [
+            "false",
+            "true"
+          ],
+          "type": "boolean"
+        },
+        "urls": {
+          "default": "https://www.linkedin.com/in/parrsam/",
+          "type": "string"
+        },
+        "use_proxy": {
+          "default": "true",
+          "options": [
+            "false",
+            "true"
+          ],
+          "type": "boolean"
+        }
+      },
       "params": [
         "cursor",
         "raw_data",
@@ -126,6 +561,32 @@
     },
     "tiktok-profile": {
       "cost_credit": 1,
+      "fields": {
+        "cursor": {
+          "default": "",
+          "type": "string"
+        },
+        "raw_data": {
+          "default": "false",
+          "options": [
+            "false",
+            "true"
+          ],
+          "type": "boolean"
+        },
+        "use_proxy": {
+          "default": "true",
+          "options": [
+            "false",
+            "true"
+          ],
+          "type": "boolean"
+        },
+        "usernames": {
+          "default": "mrbeast",
+          "type": "string"
+        }
+      },
       "params": [
         "cursor",
         "raw_data",
@@ -138,6 +599,120 @@
     },
     "youtube-search-full": {
       "cost_credit": 5,
+      "fields": {
+        "country": {
+          "default": "US",
+          "type": "string"
+        },
+        "cursor": {
+          "default": "",
+          "type": "string"
+        },
+        "download_subtitles": {
+          "default": "true",
+          "options": [
+            "false",
+            "true"
+          ],
+          "type": "boolean"
+        },
+        "duration": {
+          "default": "",
+          "type": "string"
+        },
+        "fetch_metadata": {
+          "default": "true",
+          "options": [
+            "false",
+            "true"
+          ],
+          "type": "boolean"
+        },
+        "hasSubtitles": {
+          "default": "false",
+          "options": [
+            "false",
+            "true"
+          ],
+          "type": "boolean"
+        },
+        "is4K": {
+          "default": "false",
+          "options": [
+            "false",
+            "true"
+          ],
+          "type": "boolean"
+        },
+        "isHD": {
+          "default": "false",
+          "options": [
+            "false",
+            "true"
+          ],
+          "type": "boolean"
+        },
+        "isLive": {
+          "default": "false",
+          "options": [
+            "false",
+            "true"
+          ],
+          "type": "boolean"
+        },
+        "language": {
+          "default": "en",
+          "type": "string"
+        },
+        "max_results_shorts": {
+          "default": "10",
+          "type": "integer"
+        },
+        "max_results_streams": {
+          "default": "0",
+          "type": "integer"
+        },
+        "max_results_video": {
+          "default": "20",
+          "type": "integer"
+        },
+        "queries": {
+          "default": "fitness",
+          "type": "string"
+        },
+        "raw_data": {
+          "default": "false",
+          "options": [
+            "false",
+            "true"
+          ],
+          "type": "boolean"
+        },
+        "sort_by": {
+          "default": "relevance",
+          "type": "string"
+        },
+        "subtitles_format": {
+          "default": "srt",
+          "type": "string"
+        },
+        "subtitles_language": {
+          "default": "en",
+          "type": "string"
+        },
+        "upload_date": {
+          "default": "",
+          "type": "string"
+        },
+        "use_proxy": {
+          "default": "true",
+          "options": [
+            "false",
+            "true"
+          ],
+          "type": "boolean"
+        }
+      },
       "params": [
         "country",
         "cursor",
