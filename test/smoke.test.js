@@ -91,6 +91,25 @@ function snapshotCredits() {
 	}
 }
 
+// scripts/catalog_source.py is duplicated verbatim in scrapier-app (zapier-app/scripts and
+// make-app/scripts) and must stay byte-identical; this repo cannot see those copies, so print
+// the digest for a manual compare against `sha256sum zapier-app/scripts/catalog_source.py`
+// (scrapier-app CI already checks that its two copies match each other).
+{
+	const fs = require('fs');
+	const path = require('path');
+	const { spawnSync } = require('child_process');
+	const file = path.join(__dirname, '..', 'scripts', 'catalog_source.py');
+	const sha = require('crypto').createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+	console.log(`catalog_source.py sha256 ${sha} (must equal the scrapier-app copies)`);
+	const py = spawnSync('python3', [file, '--self-test'], { encoding: 'utf8' });
+	if (py.error) {
+		console.log('python3 not available: skipping the catalog_source.py self-test');
+	} else {
+		assert.strictEqual(py.status, 0, `catalog_source.py --self-test failed:\n${py.stdout}${py.stderr}`);
+	}
+}
+
 assert.strictEqual(cred.name, 'scrapierApi');
 assert.strictEqual(cred.authenticate.properties.headers['X-API-Key'], '={{$credentials.apiKey}}');
 assert.ok(cred.test.request.url.endsWith('/me'), 'credential test hits /me');
