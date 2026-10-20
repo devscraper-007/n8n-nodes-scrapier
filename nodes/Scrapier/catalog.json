@@ -179,7 +179,7 @@
     "key": "amazon_product",
     "slug": "amazon-product",
     "label": "Amazon Product",
-    "description": "Amazon Product (1 credit per successful call)",
+    "description": "Amazon Product (2 credits per successful call)",
     "fields": [
       {
         "name": "query",
@@ -299,7 +299,7 @@
     "key": "youtube_search_full",
     "slug": "youtube-search-full",
     "label": "Youtube Search Full",
-    "description": "Youtube Search Full (1 credit per successful call)",
+    "description": "Youtube Search Full (2 credits per successful call)",
     "fields": [
       {
         "name": "queries",
@@ -427,7 +427,7 @@
     "key": "tiktok_profile",
     "slug": "tiktok-profile",
     "label": "Tiktok Profile",
-    "description": "Tiktok Profile (1 credit per successful call)",
+    "description": "Tiktok Profile (2 credits per successful call)",
     "fields": [
       {
         "name": "usernames",
@@ -459,7 +459,7 @@
     "key": "instagram_profile_posts",
     "slug": "instagram-profile-posts",
     "label": "Instagram Profile Posts",
-    "description": "Instagram Profile Posts (1 credit per successful call)",
+    "description": "Instagram Profile Posts (2 credits per successful call)",
     "fields": [
       {
         "name": "usernames",
