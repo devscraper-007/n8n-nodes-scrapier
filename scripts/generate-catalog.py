@@ -31,6 +31,9 @@ CHOSEN = [
     'duckduckgo-search',
 ]
 
+# Price of a call when endpoints.json gives none (new or unknown endpoints).
+DEFAULT_COST_CREDIT = 2
+
 TYPE_MAP = {'string': 'string', 'integer': 'number', 'number': 'number', 'boolean': 'boolean'}
 
 
@@ -84,7 +87,7 @@ def build():
             'key': slug.replace('-', '_'),
             'slug': slug,
             'label': label(slug),
-            'description': f'{label(slug)} ({credit_text(api.get("cost_credit", 1))} per successful call)',
+            'description': f'{label(slug)} ({credit_text(api.get("cost_credit", DEFAULT_COST_CREDIT))} per successful call)',
             'fields': fields,
         })
 

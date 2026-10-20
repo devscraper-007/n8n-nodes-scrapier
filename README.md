@@ -29,10 +29,10 @@ structured data.
 
 ## Pricing
 
-Each successful call costs the endpoint's credit price (shown in each
-operation's description; 1 credit for every built-in operation today),
-however many results the page holds, empty pages included. Failed calls are
-free.
+Each successful call costs 1 or 2 credits, depending on the endpoint (shown
+in each operation's description), however many results it returns, empty
+pages included. Each next page (cursor) costs the endpoint's price again.
+Failed calls are free.
 
 ## Upgrading from 1.0.x (API v1)
 
