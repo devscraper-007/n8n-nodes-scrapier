@@ -58,7 +58,7 @@ assert.strictEqual(queries.required, true);
 assert.strictEqual(cred.name, 'scrapierApi');
 assert.strictEqual(cred.authenticate.properties.headers['X-API-Key'], '={{$credentials.apiKey}}');
 assert.ok(cred.test.request.url.endsWith('/me'), 'credential test hits /me');
-assert.strictEqual(cred.test.request.baseURL, 'https://proxy.scrapier.io/api/v2');
+assert.strictEqual(cred.test.request.baseURL, 'https://api.scrapier.io/api/v2');
 assert.ok(cred.documentationUrl.includes('/api/v2/'), 'docs URL points at v2');
 
 // Runtime: stub the n8n execute context and check v2 response handling.
@@ -87,7 +87,7 @@ function makeCtx(params, response, { continueOnFail = false } = {}) {
 		{ statusCode: 200, headers: {}, body: { success: true, data: page } },
 	);
 	let out = await node.execute.call(ctx);
-	assert.strictEqual(ctx.calls[0].url, 'https://proxy.scrapier.io/api/v2/google-search/');
+	assert.strictEqual(ctx.calls[0].url, 'https://api.scrapier.io/api/v2/google-search/');
 	assert.strictEqual(ctx.calls[0].method, 'POST');
 	assert.strictEqual(ctx.calls[0].body.queries, 'pizza');
 	assert.ok(!('cursor' in ctx.calls[0].body), 'empty cursor not sent');
@@ -101,7 +101,7 @@ function makeCtx(params, response, { continueOnFail = false } = {}) {
 		{ statusCode: 200, headers: {}, body: { success: true, data: [{ a: 1 }, { a: 2 }] } },
 	);
 	out = await node.execute.call(ctx);
-	assert.strictEqual(ctx.calls[0].url, 'https://proxy.scrapier.io/api/v2/zillow-search/');
+	assert.strictEqual(ctx.calls[0].url, 'https://api.scrapier.io/api/v2/zillow-search/');
 	assert.strictEqual(ctx.calls[0].body.cursor, 'c1');
 	assert.strictEqual(out[0].length, 2);
 
