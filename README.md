@@ -6,13 +6,13 @@ structured data.
 
 ## Features
 
-- **Scrapier API v2** — calls `https://proxy.scrapier.io/api/v2`. Every
+- **Scrapier API v2** — calls `https://api.scrapier.io/api/v2`. Every
   scrape is synchronous: one call returns one page of results, with no jobs
   to poll.
 - **Scrapier credential type** — API key sent as `X-API-Key`, validated
   against `GET /api/v2/me` (shows your account email on the credential).
 - **11 operations** — 10 curated scrapers plus **Custom Scrape**, which calls
-  any endpoint in the [v2 catalog](https://proxy.scrapier.io/api/v2/endpoints)
+  any endpoint in the [v2 catalog](https://api.scrapier.io/api/v2/endpoints)
   by slug with a JSON parameter object.
 - **One page per item** — each call outputs the page object (the results
   under an endpoint-specific key such as `results`, `products` or `posts`,

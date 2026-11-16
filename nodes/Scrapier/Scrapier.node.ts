@@ -14,7 +14,7 @@ import { NodeApiError, NodeOperationError } from 'n8n-workflow';
 
 import catalog from './catalog.json';
 
-const BASE_URL = 'https://proxy.scrapier.io/api/v2';
+const BASE_URL = 'https://api.scrapier.io/api/v2';
 
 interface CatalogField {
 	name: string;
@@ -82,7 +82,7 @@ const customProperties: INodeProperties[] = [
 		required: true,
 		placeholder: 'e.g. zillow-search',
 		description:
-			'Any endpoint from the catalog at https://proxy.scrapier.io/api/v2/endpoints',
+			'Any endpoint from the catalog at https://api.scrapier.io/api/v2/endpoints',
 		displayOptions: { show: { operation: ['custom_scrape'] } },
 	},
 	{
