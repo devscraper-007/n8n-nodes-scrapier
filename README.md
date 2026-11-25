@@ -29,7 +29,7 @@ structured data.
 
 ## Pricing
 
-Each successful call costs 1 or 2 credits, depending on the endpoint (shown
+Each successful call costs 10 to 40 credits (most endpoints 10), depending on the endpoint (shown
 in each operation's description), however many results it returns, empty
 pages included. Each next page (cursor) costs the endpoint's price again.
 Failed calls are free.

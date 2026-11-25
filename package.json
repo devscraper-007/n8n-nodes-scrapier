@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-scrapier",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "n8n community node for the Scrapier web scraping API — Google, Amazon, Instagram, TikTok, LinkedIn and 20+ more platforms as structured data",
   "keywords": [
     "n8n-community-node-package",

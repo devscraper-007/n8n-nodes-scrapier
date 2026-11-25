@@ -29,15 +29,15 @@ for (const o of opProp.options) {
 	assert.ok(/per successful call/.test(o.description), `${o.value} states per-call pricing`);
 	assert.ok(!/per row/i.test(o.description), `${o.value} has no per-row pricing`);
 	assert.ok(
-		/\((1 credit|2 credits) per successful call\)/.test(o.description),
-		`${o.value} costs 1 or 2 credits`,
+		/\(([1-4]0 credits) per successful call\)/.test(o.description),
+		`${o.value} costs 10 to 40 credits`,
 	);
 }
-// Prices follow the 2026-10-20 price list: most endpoints cost 2, some 1.
+// Prices follow the 2026-11-25 price list (10x credits): most endpoints cost 10, some 20 to 40.
 const priceOf = (value) => opProp.options.find((o) => o.value === value).description;
-assert.ok(/\(1 credit per/.test(priceOf('google_search')), 'google_search costs 1 credit');
-assert.ok(/\(2 credits per/.test(priceOf('amazon_product')), 'amazon_product costs 2 credits');
-assert.ok(/\(2 credits per/.test(priceOf('youtube_search_full')), 'youtube_search_full costs 2 credits');
+assert.ok(/\(10 credits per/.test(priceOf('google_search')), 'google_search costs 10 credits');
+assert.ok(/\(10 credits per/.test(priceOf('amazon_product')), 'amazon_product costs 10 credits');
+assert.ok(/\(20 credits per/.test(priceOf('youtube_search_full')), 'youtube_search_full costs 20 credits');
 
 // v2 is synchronous: no webhook / row-splitting options remain.
 const propNames = node.description.properties.map((p) => p.name);

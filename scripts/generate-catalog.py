@@ -32,7 +32,7 @@ CHOSEN = [
 ]
 
 # Price of a call when endpoints.json gives none (new or unknown endpoints).
-DEFAULT_COST_CREDIT = 2
+DEFAULT_COST_CREDIT = 20
 
 TYPE_MAP = {'string': 'string', 'integer': 'number', 'number': 'number', 'boolean': 'boolean'}
 
